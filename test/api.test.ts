@@ -32,6 +32,7 @@ const post = (url: string, payload: object, headers: Record<string, string> = {}
   app.inject({ method: 'POST', url, payload, headers: { origin: ORIGIN, ...headers } });
 
 async function login(email: string): Promise<string> {
+  await db.query('DELETE FROM login_tokens');   // Stundenlimit pro Konto im Test umgehen
   mails.length = 0;
   assert.equal((await post('/api/login/request', { email })).statusCode, 200);
   const token = mails[0].text.match(/\/anmelden#([\w-]+)/)![1];
@@ -180,4 +181,38 @@ test('Selbstbedienung: Vorlage laden, prüfen, hochladen, zurückwechseln', asyn
   // Fremden Plan aktivieren geht nicht
   const dirk = (await app.inject({ url: '/api/plan', headers: { cookie: await login('dirk@example.org') } })).json();
   assert.equal((await app.inject({ method: 'POST', url: `/api/plans/${dirk.id}/activate`, payload: {}, headers: H })).statusCode, 404);
+});
+
+test('Anmeldung mit Code: in der Mail, Fehlversuche begrenzt, nur der neueste gilt', async () => {
+  await db.query('DELETE FROM login_tokens');
+  const req = async () => { mails.length = 0; assert.equal((await post('/api/login/request', { email: 'mella@example.org' })).statusCode, 200); return mails[0]; };
+  const code = (m: Mail) => m.subject.match(/^(\d{6}) ist dein Slothly-Code$/)![1];
+  const send = (c: string) => post('/api/login/code', { email: 'Mella@example.org', code: c });
+
+  const m1 = await req();
+  assert.match(m1.text, new RegExp(code(m1)));
+  const m2 = await req();
+  assert.equal((await send(code(m1))).statusCode, code(m1) === code(m2) ? 200 : 400, 'nur der neueste Code gilt');
+
+  const m3 = await req();
+  const bad = code(m3) === '000000' ? '111111' : '000000';
+  const r1 = await send(bad);
+  assert.equal(r1.statusCode, 400);
+  assert.match(r1.json().message, /Noch 4 Versuche/);
+  for (let i = 0; i < 4; i++) await send(bad);
+  assert.equal((await send(code(m3))).statusCode, 400, 'nach 5 Fehlversuchen ist der Code verbraucht');
+
+  // Höchstens 5 Codes pro Stunde und Konto: danach gleiche Antwort, aber keine Mail
+  await req(); await req();
+  mails.length = 0;
+  assert.equal((await post('/api/login/request', { email: 'mella@example.org' })).statusCode, 200);
+  assert.equal(mails.length, 0);
+
+  await db.query('DELETE FROM login_tokens');
+  const m4 = await req();
+  const ok = await send(` ${code(m4).slice(0, 3)} ${code(m4).slice(3)} `);   // Leerzeichen beim Abtippen
+  assert.equal(ok.statusCode, 200);
+  const cookie = ok.cookies.find(c => c.name === 'slothly_session')!;
+  assert.equal((await app.inject({ url: '/api/me', headers: { cookie: `${cookie.name}=${cookie.value}` } })).json().name, 'Mella');
+  assert.equal((await send(code(m4))).statusCode, 400, 'Code nur einmal verwendbar');
 });

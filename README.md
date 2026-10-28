@@ -33,8 +33,16 @@ Umgebungsvariablen, damit das Image auf jedem Host gleich läuft.
 
 ## Anmeldung
 
-Keine Passwörter. Auf der Startseite die eigene Adresse eingeben, Link aus der Mail öffnen,
-„Anmelden“ tippen. Konten legt nur die Kommandozeile an, es gibt keine Registrierung.
+Keine Passwörter. Adresse eingeben, „Code schicken“, den 6-stelligen Code aus der Mail
+(steht im Betreff) eintippen. So landet die Anmeldung genau in der App, in der man ihn
+eintippt, auch in der iPhone-App auf dem Home-Bildschirm (die hat einen eigenen
+Cookie-Speicher, getrennt von Safari). Der Link in derselben Mail meldet dagegen den
+Browser an, in dem er sich öffnet.
+
+Code und Link gelten 20 Minuten und einmal, nur der zuletzt angeforderte Code zählt,
+höchstens 5 Fehlversuche pro Code und 5 Codes pro Konto und Stunde. Die Anmeldung gilt
+danach 180 Tage pro Gerät und verlängert sich bei Nutzung. Konten legt nur die
+Kommandozeile an, es gibt keine Registrierung.
 
 ## Pläne
 

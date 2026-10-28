@@ -22,20 +22,28 @@ main{width:100%;max-width:380px;background:var(--surface);border:1px solid var(-
 h1{margin:0;font:700 30px/1 "Barlow Condensed","Arial Narrow",sans-serif;letter-spacing:.02em;text-transform:uppercase}
 p{margin:0;color:var(--muted)}
 label{display:grid;gap:6px;font-size:14px;color:var(--muted)}
-input{height:48px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:inherit;font-size:17px;background:var(--bg);color:var(--ink)}
+input{width:100%;min-width:0;height:48px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:inherit;font-size:17px;background:var(--bg);color:var(--ink)}
 input:focus{outline:2px solid var(--accent);outline-offset:-1px}
 button{height:48px;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:600;font-size:17px;cursor:pointer}
 button:disabled{opacity:.6}
+.code{font-size:28px;letter-spacing:.3em;text-align:center;font-variant-numeric:tabular-nums}
+button.link{background:none;color:var(--accent);height:auto;font-size:15px;font-weight:500;padding:12px 0 0;width:100%}
 .msg{font-size:15px}
 .msg.err{color:var(--warn)} .msg.ok{color:var(--ok)}
 </style>
 </head><body>
 <main>
   <h1>Slothly</h1>
-  <form id="req" hidden>
-    <p style="margin-bottom:14px">Gib deine E-Mail-Adresse ein. Du bekommst einen Link, mit dem du dich anmeldest.</p>
-    <label>E-Mail<input id="email" type="email" autocomplete="email" inputmode="email" required></label>
-    <button type="submit" style="width:100%;margin-top:14px">Link schicken</button>
+  <form id="req" hidden novalidate>
+    <p style="margin-bottom:14px">Gib deine E-Mail-Adresse ein. Du bekommst einen Code, mit dem du dich hier anmeldest.</p>
+    <label>E-Mail<input id="email" name="email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false"></label>
+    <button type="submit" style="width:100%;margin-top:14px">Code schicken</button>
+  </form>
+  <form id="codef" hidden novalidate>
+    <p style="margin-bottom:14px">Wenn es ein Konto für <b id="to"></b> gibt, ist der Code unterwegs. Er steht im Betreff der Mail.</p>
+    <label>Code<input id="code" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="7" class="code"></label>
+    <button type="submit" style="width:100%;margin-top:14px">Anmelden</button>
+    <button type="button" id="again" class="link">Andere Adresse oder neuer Code</button>
   </form>
   <div id="conf" hidden style="display:grid;gap:14px">
     <p>Tippe auf Anmelden, um dich auf diesem Gerät anzumelden.</p>
@@ -60,12 +68,18 @@ if(location.pathname==='/anmelden'&&t){
     catch(e){show(e.message,'err');c.hidden=true;showReq()}});
 }else showReq();
 function showReq(){
-  const f=document.getElementById('req');f.hidden=false;
+  const f=document.getElementById('req'),cf=document.getElementById('codef'),em=document.getElementById('email');
+  f.hidden=false;
   f.addEventListener('submit',async ev=>{ev.preventDefault();const b=f.querySelector('button');b.disabled=true;show('');
-    try{await post('/api/login/request',{email:document.getElementById('email').value});
-      show('Wenn es ein Konto mit dieser Adresse gibt, ist der Link unterwegs. Schau in dein Postfach.','ok')}
+    try{await post('/api/login/request',{email:em.value});
+      f.hidden=true;cf.hidden=false;document.getElementById('to').textContent=em.value.trim();
+      const c=document.getElementById('code');c.value='';c.focus()}
     catch(e){show(e.message,'err')}
     b.disabled=false});
+  cf.addEventListener('submit',async ev=>{ev.preventDefault();const b=cf.querySelector('button[type=submit]');b.disabled=true;show('');
+    try{await post('/api/login/code',{email:em.value,code:document.getElementById('code').value});location.replace('/')}
+    catch(e){show(e.message,'err');b.disabled=false}});
+  document.getElementById('again').addEventListener('click',()=>{cf.hidden=true;f.hidden=false;show('');em.focus()});
 }
 })();
 </script>

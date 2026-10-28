@@ -51,9 +51,9 @@ try {
   } else if (cmd === 'login-link') {
     const origin = process.env.PUBLIC_ORIGIN;
     if (!origin) throw new Error('PUBLIC_ORIGIN fehlt');
-    const l = await createLoginLink(db, { publicOrigin: origin.replace(/\/$/, ''), loginLinkMinutes: 60 }, args[0] ?? '');
-    if (!l) throw new Error('Kein aktives Konto mit dieser Adresse');
-    console.log(`Gültig 60 Minuten, einmal verwendbar:\n${l.link}`);
+    const l = await createLoginLink(db, { publicOrigin: origin.replace(/\/$/, ''), loginLinkMinutes: 60 }, args[0] ?? '', true);
+    if (!l || l === 'limit') throw new Error('Kein aktives Konto mit dieser Adresse');
+    console.log(`Gültig 60 Minuten, einmal verwendbar.\nCode (in der App eingeben, nach "Link schicken"): ${l.code}\nLink (meldet den Browser an, in dem er sich öffnet):\n${l.link}`);
   } else if (cmd === 'import-plan') {
     const id = await importPlan(db, args[0] ?? '', readPlanFile(await readJson(args[1])), true);
     console.log(`Plan importiert und aktiv (${id}).`);
