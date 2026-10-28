@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="de"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Anmelden · Slothly</title>
+<meta name="theme-color" content="#1f4fd1">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Slothly">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<style>
+@font-face{font-family:"Barlow";font-weight:400;font-display:swap;src:url(/fonts/barlow-400.woff2) format("woff2")}
+@font-face{font-family:"Barlow";font-weight:600;font-display:swap;src:url(/fonts/barlow-600.woff2) format("woff2")}
+@font-face{font-family:"Barlow Condensed";font-weight:700;font-display:swap;src:url(/fonts/barlow-condensed-700.woff2) format("woff2")}
+:root{--bg:#eef0f4;--surface:#fff;--ink:#15181e;--muted:#5b6372;--line:#dce0e8;--accent:#1f4fd1;--accent-ink:#fff;--warn:#a9500f;--ok:#1d8549;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0e1115;--surface:#171b21;--ink:#e7eaf0;--muted:#8e97a5;--line:#2a3039;--accent:#7097ff;--accent-ink:#0b1020;--warn:#e8935a;--ok:#46c27b;color-scheme:dark}}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--ink);font:16px/1.45 "Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;padding:16px}
+main{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:26px 22px;display:grid;gap:16px}
+h1{margin:0;font:700 30px/1 "Barlow Condensed","Arial Narrow",sans-serif;letter-spacing:.02em;text-transform:uppercase}
+p{margin:0;color:var(--muted)}
+label{display:grid;gap:6px;font-size:14px;color:var(--muted)}
+input{height:48px;border:1px solid var(--line);border-radius:10px;padding:0 12px;font:inherit;font-size:17px;background:var(--bg);color:var(--ink)}
+input:focus{outline:2px solid var(--accent);outline-offset:-1px}
+button{height:48px;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font:inherit;font-weight:600;font-size:17px;cursor:pointer}
+button:disabled{opacity:.6}
+.msg{font-size:15px}
+.msg.err{color:var(--warn)} .msg.ok{color:var(--ok)}
+</style>
+</head><body>
+<main>
+  <h1>Slothly</h1>
+  <form id="req" hidden>
+    <p style="margin-bottom:14px">Gib deine E-Mail-Adresse ein. Du bekommst einen Link, mit dem du dich anmeldest.</p>
+    <label>E-Mail<input id="email" type="email" autocomplete="email" inputmode="email" required></label>
+    <button type="submit" style="width:100%;margin-top:14px">Link schicken</button>
+  </form>
+  <div id="conf" hidden style="display:grid;gap:14px">
+    <p>Tippe auf Anmelden, um dich auf diesem Gerät anzumelden.</p>
+    <button type="button" id="go">Anmelden</button>
+  </div>
+  <p class="msg" id="msg" role="status"></p>
+</main>
+<script>
+(function(){
+"use strict";
+const msg=document.getElementById('msg');
+const show=(t,c)=>{msg.textContent=t;msg.className='msg '+(c||'')};
+async function post(url,body){const r=await fetch(url,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body),credentials:'same-origin'});
+  let d={};try{d=await r.json()}catch(e){}if(!r.ok)throw new Error(d.message||'Fehler '+r.status);return d}
+const t=location.hash.slice(1);
+if(location.pathname==='/anmelden'&&t){
+  history.replaceState(null,'','/anmelden');   // Token nicht im Verlauf lassen
+  const c=document.getElementById('conf');c.hidden=false;
+  const b=document.getElementById('go');
+  b.addEventListener('click',async()=>{b.disabled=true;show('');
+    try{await post('/api/login/confirm',{token:t});location.replace('/')}
+    catch(e){show(e.message,'err');c.hidden=true;showReq()}});
+}else showReq();
+function showReq(){
+  const f=document.getElementById('req');f.hidden=false;
+  f.addEventListener('submit',async ev=>{ev.preventDefault();const b=f.querySelector('button');b.disabled=true;show('');
+    try{await post('/api/login/request',{email:document.getElementById('email').value});
+      show('Wenn es ein Konto mit dieser Adresse gibt, ist der Link unterwegs. Schau in dein Postfach.','ok')}
+    catch(e){show(e.message,'err')}
+    b.disabled=false});
+}
+})();
+</script>
+</body></html>

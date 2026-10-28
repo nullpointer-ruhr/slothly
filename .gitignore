@@ -1,0 +1,5 @@
+node_modules/
+.env
+*.local.json
+# Eigene Pläne enthalten Gesundheitsangaben: nicht in dieses öffentliche Repo.
+plans/
