@@ -1,5 +1,7 @@
 # Slothly
 
+<img src="web/logo.jpg" alt="Slothly" width="320">
+
 Trainingsplan und Logger fürs Krafttraining, gebaut aus dem Zyklus-1-Plan. Läuft am Handy
 als Web-App: Satz für Satz abhaken, Pausentimer, Feedback, Termine verschieben. Ein Konto
 pro Person, jedes mit eigenem Plan; die Übungsbibliothek ist gemeinsam.

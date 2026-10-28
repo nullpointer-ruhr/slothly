@@ -42,6 +42,7 @@ const FONTS: Record<string, string> = {
 };
 const STATIC: Record<string, string> = {
   '/manifest.webmanifest': 'application/manifest+json',
+  '/logo.jpg': 'image/jpeg',
   '/icon-192.png': 'image/png', '/icon-512.png': 'image/png', '/apple-touch-icon.png': 'image/png', '/favicon.ico': 'image/x-icon',
 };
 
