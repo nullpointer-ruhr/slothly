@@ -1,61 +1,37 @@
-// Pläne: Import aus JSON (Format slothly-plan/1, siehe seed/demo-plan.json), Abfrage für die
+// Pläne: Import (Format siehe src/planfile.ts und seed/vorlage.json), Abfrage für die
 // Oberfläche, Trainings-Logs und Export. Jede Abfrage ist an den angemeldeten Nutzer gebunden.
-import type { FastifyInstance, FastifyRequest } from 'fastify';
+import type { FastifyInstance, FastifyReply, FastifyRequest } from 'fastify';
+import { readFileSync } from 'node:fs';
 import type { Config } from './config.ts';
 import { tx, type Db, type Tx } from './db.ts';
 import { fail, normEmail, requireUser } from './auth.ts';
+import { checkPlan, parsePlanFile, summarize, toV2, type PlanFile, type PlanSlot } from './planfile.ts';
 
-export interface PlanSlot {
-  b: string; n: string; m?: string | null; q?: string | null; k?: string | null; i?: string | null;
-  st?: string | null; pa?: string | null; scheme: string; format: 'standard' | 'per_pause' | 'circuit' | 'rounds';
-  r?: string | null; side?: string | null; wu?: boolean; top?: boolean; cap?: string | null;
-}
-export interface PlanDay {
-  title: string; offset: number; warm?: string[]; skill?: string | null; cool?: string | null;
-  notes?: string[]; groups?: Record<string, string>; ex: PlanSlot[];
-}
-export interface PlanFile {
-  format: 'slothly-plan/1'; name: string; subtitle?: string | null; startDate: string; weeks: number;
-  weekLabels?: string[]; topsetWeek?: number | null; intro?: string | null; dayNote?: string | null;
-  rules?: unknown[]; schemes: Record<string, [number, string | null][]>; days: PlanDay[];
-}
+export type { PlanFile } from './planfile.ts';
 
-const FORMATS = new Set(['standard', 'per_pause', 'circuit', 'rounds']);
-
-/** Prüft die Datei, bevor etwas geschrieben wird. Wirft mit einer verständlichen Meldung. */
+/** Wirft mit allen Fehlern, falls die Datei ungültig ist (für CLI und Tests). */
 export function validatePlan(p: PlanFile): void {
-  const err = (m: string): never => { throw new Error(`Plan ungültig: ${m}`); };
-  if (p?.format !== 'slothly-plan/1') err('format muss "slothly-plan/1" sein');
-  if (!p.name) err('name fehlt');
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(p.startDate ?? '')) err('startDate muss JJJJ-MM-TT sein');
-  if (!Number.isInteger(p.weeks) || p.weeks < 1 || p.weeks > 26) err('weeks muss 1 bis 26 sein');
-  for (const [code, w] of Object.entries(p.schemes ?? {})) {
-    if (!/^[A-Z0-9_]{1,16}$/.test(code)) err(`Schema-Code ${code}: nur A-Z, 0-9, _`);
-    if (!Array.isArray(w) || w.length !== p.weeks) err(`Schema ${code}: braucht genau ${p.weeks} Wochen`);
-    w.forEach((x, i) => { if (!Array.isArray(x) || !Number.isInteger(x[0]) || x[0] < 0) err(`Schema ${code}, Woche ${i + 1}: [Sätze, RPE]`); });
-  }
-  if (!Array.isArray(p.days) || !p.days.length) err('days fehlt');
-  p.days.forEach((d, di) => {
-    if (!d.title) err(`Tag ${di + 1}: title fehlt`);
-    if (!Number.isInteger(d.offset) || d.offset < 0 || d.offset > 6) err(`Tag ${di + 1}: offset 0 bis 6 (0 = Montag)`);
-    const seen = new Set<string>();
-    d.ex.forEach(e => {
-      const where = `Tag ${di + 1}, ${e.b}`;
-      if (!/^[A-Z][A-Z0-9+]{0,3}$/.test(e.b ?? '')) err(`${where}: Label wie A, A+, B1 (Großbuchstabe, max. 4 Zeichen)`);
-      if (!e.n) err(`${where}: Name (n) fehlt`);
-      if (seen.has(e.b)) err(`${where}: Label doppelt`); seen.add(e.b);
-      if (!p.schemes[e.scheme]) err(`${where}: Schema ${e.scheme} fehlt in schemes`);
-      if (!FORMATS.has(e.format)) err(`${where}: format ${e.format} unbekannt`);
-    });
-  });
+  const r = p?.format === 'slothly-plan/1' ? checkPlan(p) : parsePlanFile(p);
+  if (r.errors.length) throw new Error('Plan ungültig:\n- ' + r.errors.join('\n- '));
+}
+
+/** Datei (v1 oder v2) einlesen; wirft mit allen Fehlern. */
+export function readPlanFile(raw: unknown): PlanFile {
+  const r = parsePlanFile(raw);
+  if (!r.plan) throw new Error('Plan ungültig:\n- ' + r.errors.join('\n- '));
+  return r.plan;
 }
 
 /** Legt den Plan für einen Nutzer an. Übungen werden über den Namen in der Bibliothek geteilt. */
 export async function importPlan(db: Db, email: string, p: PlanFile, activate = true): Promise<string> {
   validatePlan(p);
+  const u = await db.query<{ id: string }>('SELECT id FROM users WHERE email = $1', [normEmail(email)]);
+  return importPlanFor(db, u.rows[0]?.id ?? fail(404, `Kein Konto für ${email}`), p, activate);
+}
+
+/** Schreibt einen bereits geprüften Plan. Alte Pläne bleiben samt Logs erhalten. */
+export async function importPlanFor(db: Db, userId: string, p: PlanFile, activate = true): Promise<string> {
   return tx(db, async c => {
-    const u = await c.query<{ id: string }>('SELECT id FROM users WHERE email = $1', [normEmail(email)]);
-    const userId = u.rows[0]?.id ?? fail(404, `Kein Konto für ${email}`);
     if (activate) await c.query('UPDATE plans SET active = false WHERE user_id = $1', [userId]);
     const pr = await c.query<{ id: string }>(
       `INSERT INTO plans (user_id, name, subtitle, start_date, weeks, week_labels, topset_week, intro, day_note, rules, active)
@@ -164,7 +140,7 @@ async function exportFor(db: Db, u: { id: string; email: string; name: string })
     for (const l of (await db.query('SELECT week, day_idx, data FROM workout_logs WHERE plan_id = $1 ORDER BY week, day_idx', [id])).rows)
       logs[`w${l.week}d${l.day_idx + 1}`] = l.data;
     const { id: _id, skips, ...plan } = p;
-    plans.push({ plan: { format: 'slothly-plan/1', ...plan }, logs: { format: 'slothly-logs/1', logs, skips } });
+    plans.push({ plan: toV2({ format: 'slothly-plan/1', ...plan } as PlanFile), logs: { format: 'slothly-logs/1', logs, skips } });
   }
   return { format: 'slothly-export/1', exportedAt: new Date().toISOString(), user: { email: u.email, name: u.name }, plans };
 }
@@ -216,10 +192,73 @@ export function planRoutes(app: FastifyInstance, db: Db, cfg: Config) {
     return reply.code(409).send({ dates: s.skip_dates, updatedAt: Number(s.skips_updated_at) });
   });
 
+  // ---------- Pläne selbst verwalten: Vorlage, Download, Prüfen, Hochladen, Wechseln ----------
+
+  const attach = (reply: FastifyReply, name: string, body: unknown) =>
+    reply.header('Content-Disposition', `attachment; filename="${name}"`).type('application/json; charset=utf-8').send(JSON.stringify(body, null, 2) + '\n');
+  const slug = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 40) || 'plan';
+
+  app.get('/api/plan-template', async (req, reply) => {
+    await requireUser(db, cfg, req);
+    return attach(reply, 'slothly-vorlage.json', template());
+  });
+
+  // Aktiver (oder gewählter) Plan im Austauschformat: Grundlage für den nächsten Zyklus.
+  app.get('/api/plan/download', async (req: FastifyRequest<{ Querystring: { id?: string } }>, reply) => {
+    const u = await requireUser(db, cfg, req);
+    if (req.query.id) await ownPlan(u.userId, req.query.id);
+    const p = (await loadPlan(db, u.userId, req.query.id)) ?? fail(404, 'Noch kein Plan hinterlegt.');
+    const { id: _id, skips: _s, ...plan } = p;
+    return attach(reply, `slothly-${slug(p.name)}.json`, { _anleitung: template()._anleitung, ...toV2({ format: 'slothly-plan/1', ...plan } as PlanFile) });
+  });
+
+  // Prüfen ohne zu speichern: Vorschau und alle Fehler auf einmal.
+  app.post('/api/plans/check', async (req: FastifyRequest<{ Body: { plan?: unknown } }>) => {
+    await requireUser(db, cfg, req);
+    const r = parsePlanFile(req.body?.plan);
+    return { ok: !!r.plan, errors: r.errors, warnings: r.warnings, summary: r.plan ? summarize(r.plan) : null };
+  });
+
+  // Übernehmen: neuer Plan wird aktiv, der bisherige bleibt mit allen Einträgen erhalten.
+  app.post('/api/plans', async (req: FastifyRequest<{ Body: { plan?: unknown } }>) => {
+    const u = await requireUser(db, cfg, req);
+    const r = parsePlanFile(req.body?.plan);
+    if (!r.plan) fail(400, 'Plan ungültig: ' + r.errors.join('; '));
+    const count = await db.query<{ n: number }>('SELECT count(*)::int AS n FROM plans WHERE user_id = $1', [u.userId]);
+    if (count.rows[0].n >= 100) fail(400, 'Zu viele Pläne gespeichert.');
+    return { id: await importPlanFor(db, u.userId, r.plan!, true) };
+  });
+
+  app.get('/api/plans', async req => {
+    const u = await requireUser(db, cfg, req);
+    const r = await db.query(
+      `SELECT p.id, p.name, p.subtitle, to_char(p.start_date, 'YYYY-MM-DD') AS start, p.weeks, p.active,
+              (SELECT count(*)::int FROM workout_logs w WHERE w.plan_id = p.id) AS sessions
+         FROM plans p WHERE p.user_id = $1 ORDER BY p.start_date DESC, p.created_at DESC`, [u.userId]);
+    return { plans: r.rows };
+  });
+
+  app.post('/api/plans/:id/activate', async (req: FastifyRequest<{ Params: { id: string } }>) => {
+    const u = await requireUser(db, cfg, req);
+    await ownPlan(u.userId, req.params.id);
+    await tx(db, async c => {
+      await c.query('UPDATE plans SET active = false WHERE user_id = $1 AND active', [u.userId]);
+      await c.query('UPDATE plans SET active = true WHERE id = $1', [req.params.id]);
+    });
+    return { ok: true };
+  });
+
   // Alle eigenen Daten als JSON, z. B. vor einem Umzug oder als zusätzliche Sicherung.
   app.get('/api/export', async (req, reply) => {
     const u = await requireUser(db, cfg, req);
     const data = await exportFor(db, { id: u.userId, email: u.email, name: u.name });
     return reply.header('Content-Disposition', `attachment; filename="slothly-${new Date().toISOString().slice(0, 10)}.json"`).send(data);
   });
+}
+
+let tpl: (PlanV2Template) | null = null;
+type PlanV2Template = { _anleitung: string[] } & Record<string, unknown>;
+/** Vorlage mit Anleitung (seed/vorlage.json), einmal gelesen. */
+export function template(): PlanV2Template {
+  return tpl ??= JSON.parse(readFileSync(new URL('../seed/vorlage.json', import.meta.url), 'utf8'));
 }

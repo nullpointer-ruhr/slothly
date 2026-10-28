@@ -1,0 +1,258 @@
+{
+  "_anleitung": [
+    "SLOTHLY-PLANVORLAGE. So entsteht dein eigener Plan:",
+    "1. Diese Datei mit deinem Trainingsplan (PDF, Foto, Text) an Claude geben und schreiben: 'Fülle diese Slothly-Vorlage mit meinem Plan aus. Behalte Format und Feldnamen exakt bei, ersetze alle Beispielwerte, und frag nach, wenn Angaben fehlen.' Oder die Datei selbst in einem Texteditor ändern.",
+    "2. In Slothly unter Regeln > Pläne > 'Plan hochladen' die fertige Datei wählen. Die App prüft sie und zeigt eine Vorschau; erst 'Übernehmen' speichert. Der bisherige Plan bleibt mit allen Einträgen erhalten.",
+    "FELDER (oben): name, untertitel; start = Montag der ersten Woche (JJJJ-MM-TT); wochen = Anzahl Wochen; wochenNamen = Bezeichnung je Woche (z. B. Einstieg, Deload); topsatzWoche = Woche mit Topsatz-Test oder null; einleitung und tagesHinweis = freie Texte.",
+    "schemata: benannte Wochenschemata (Name nur Großbuchstaben/Ziffern/_). Je Woche ein Eintrag {saetze, rpe}; Anzahl Einträge = wochen. Mehrere Übungen können dasselbe Schema nutzen (z. B. HAUPT, NEBEN, REHA). Bei Zirkeln und Pausenfüllern rpe weglassen.",
+    "regeln: Abschnitte für den Regeln-Reiter mit titel und optional absaetze, liste, tabelle {kopf, zeilen}. **fett** ist erlaubt.",
+    "tage: ein Eintrag pro Trainingstag in Wochenreihenfolge. wochentag = Mo, Di, Mi, Do, Fr, Sa oder So. aufwaermen = Abhakliste, skill/cooldown = Text oder null, hinweise = Liste, bloecke = Überschrift je Buchstabe (A, B, C ...).",
+    "uebungen: block (A, A+, B1, B2 ...; Supersätze teilen den Buchstaben), name, muskel, video (Suchbegriff, englisch findet mehr), kadenz (z. B. 3-1-X-0), info, start (Startgewicht), pause (z. B. '2 min', '90 s', 'direkt zu B2': danach startet der Pausentimer), schema, wdh (z. B. 8–12), optional seite ('je Seite'), aufwaermsaetze (true: 10 / 50 % / 75 %), topsatz (true: in der topsatzWoche 1×5–8 @9), deckel (Hinweis-Etikett, z. B. 'Schulter-Deckel').",
+    "darstellung: saetze = normale Arbeitssätze (Sätze × wdh @rpe); zirkel = Runden × wdh; runden = Runden mit Freitext in wdh; pausenfueller = 1 × wdh in jeder Pause des Hauptblocks.",
+    "Das Feld _anleitung wird beim Hochladen ignoriert und darf bleiben oder gelöscht werden."
+  ],
+  "format": "slothly-plan/2",
+  "name": "Demo-Plan",
+  "untertitel": "Ganzkörper 2×/Woche",
+  "start": "2026-11-02",
+  "wochen": 4,
+  "wochenNamen": [
+    "Einstieg",
+    "Volumen",
+    "Volumen",
+    "Deload"
+  ],
+  "topsatzWoche": null,
+  "einleitung": "Beispielplan zum Ausprobieren. Eigene Pläne im selben Format anlegen und mit cli.ts import-plan einspielen.",
+  "tagesHinweis": "RPE hat Vorrang vor dem Gewicht",
+  "schemata": {
+    "HAUPT": [
+      {
+        "saetze": 3,
+        "rpe": "7"
+      },
+      {
+        "saetze": 4,
+        "rpe": "7–8"
+      },
+      {
+        "saetze": 4,
+        "rpe": "8"
+      },
+      {
+        "saetze": 2,
+        "rpe": "6"
+      }
+    ],
+    "NEBEN": [
+      {
+        "saetze": 2,
+        "rpe": "7"
+      },
+      {
+        "saetze": 3,
+        "rpe": "8"
+      },
+      {
+        "saetze": 3,
+        "rpe": "8"
+      },
+      {
+        "saetze": 2,
+        "rpe": "6"
+      }
+    ],
+    "RUMPF": [
+      {
+        "saetze": 2
+      },
+      {
+        "saetze": 3
+      },
+      {
+        "saetze": 3
+      },
+      {
+        "saetze": 1
+      }
+    ]
+  },
+  "regeln": [
+    {
+      "titel": "RPE",
+      "tabelle": {
+        "kopf": [
+          "RPE",
+          "Reserve"
+        ],
+        "zeilen": [
+          [
+            "7",
+            "3 Wdh."
+          ],
+          [
+            "8",
+            "2 Wdh."
+          ],
+          [
+            "9",
+            "1 Wdh."
+          ]
+        ]
+      }
+    },
+    {
+      "titel": "Progression",
+      "liste": [
+        "**Doppelte Progression:** oberes Ende in allen Sätzen geschafft, dann Gewicht hoch."
+      ]
+    }
+  ],
+  "tage": [
+    {
+      "titel": "Ganzkörper A",
+      "wochentag": "Mo",
+      "aufwaermen": [
+        "Rudern 3 min",
+        "Cat-Cow 8"
+      ],
+      "skill": null,
+      "cooldown": "Dehnen nach Wahl",
+      "hinweise": [
+        "Hauptübung zuerst, Zirkel zum Schluss."
+      ],
+      "bloecke": {
+        "A": "Block A · Hauptübung",
+        "B": "Supersatz B",
+        "C": "Zirkel C"
+      },
+      "uebungen": [
+        {
+          "block": "A",
+          "name": "Goblet Squat",
+          "muskel": "Quadrizeps",
+          "video": "goblet squat",
+          "kadenz": "3-1-X-0",
+          "info": null,
+          "start": "16 kg",
+          "pause": "2 min",
+          "schema": "HAUPT",
+          "darstellung": "saetze",
+          "wdh": "8–12",
+          "aufwaermsaetze": true
+        },
+        {
+          "block": "B1",
+          "name": "Liegestütz",
+          "muskel": "Brust",
+          "video": "push up technique",
+          "kadenz": "2-0-X-0",
+          "info": null,
+          "start": "KG",
+          "pause": "direkt zu B2",
+          "schema": "NEBEN",
+          "darstellung": "saetze",
+          "wdh": "8–15"
+        },
+        {
+          "block": "B2",
+          "name": "Rudern einarmig mit KH",
+          "muskel": "Latissimus",
+          "video": "one arm dumbbell row",
+          "kadenz": "2-1-X-1",
+          "info": null,
+          "start": "16 kg",
+          "pause": "90 s",
+          "schema": "NEBEN",
+          "darstellung": "saetze",
+          "wdh": "10–12",
+          "seite": "je Seite"
+        },
+        {
+          "block": "C1",
+          "name": "Dead Bug",
+          "muskel": "Tiefer Rumpf",
+          "video": "dead bug exercise",
+          "kadenz": null,
+          "info": null,
+          "start": "KG",
+          "pause": "direkt zu C2",
+          "schema": "RUMPF",
+          "darstellung": "zirkel",
+          "wdh": "8 je Seite"
+        },
+        {
+          "block": "C2",
+          "name": "Side Plank",
+          "muskel": "Schräge Bauchmuskeln",
+          "video": "side plank",
+          "kadenz": null,
+          "info": null,
+          "start": "KG",
+          "pause": "60 s/Runde",
+          "schema": "RUMPF",
+          "darstellung": "zirkel",
+          "wdh": "30 s je Seite"
+        }
+      ]
+    },
+    {
+      "titel": "Ganzkörper B",
+      "wochentag": "Do",
+      "aufwaermen": [
+        "Rad 3 min",
+        "Hip CARs 4 je Seite"
+      ],
+      "skill": null,
+      "cooldown": null,
+      "hinweise": [],
+      "bloecke": {
+        "A": "Block A · Hauptübung",
+        "B": "Supersatz B"
+      },
+      "uebungen": [
+        {
+          "block": "A",
+          "name": "Romanian Deadlift, Kurzhanteln",
+          "muskel": "Beinbeuger",
+          "video": "dumbbell romanian deadlift",
+          "kadenz": "3-1-X-0",
+          "info": null,
+          "start": "2×16 kg",
+          "pause": "2 min",
+          "schema": "HAUPT",
+          "darstellung": "saetze",
+          "wdh": "8–10",
+          "aufwaermsaetze": true
+        },
+        {
+          "block": "B1",
+          "name": "Schulterdrücken sitzend mit KH",
+          "muskel": "Vordere Schulter",
+          "video": "seated dumbbell shoulder press",
+          "kadenz": "2-0-X-0",
+          "info": null,
+          "start": "2×10 kg",
+          "pause": "direkt zu B2",
+          "schema": "NEBEN",
+          "darstellung": "saetze",
+          "wdh": "8–12"
+        },
+        {
+          "block": "B2",
+          "name": "Ausfallschritt rückwärts",
+          "muskel": "Gesäß",
+          "video": "reverse lunge",
+          "kadenz": "2-0-X-0",
+          "info": null,
+          "start": "KG",
+          "pause": "90 s",
+          "schema": "NEBEN",
+          "darstellung": "saetze",
+          "wdh": "8–12",
+          "seite": "je Seite"
+        }
+      ]
+    }
+  ]
+}

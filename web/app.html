@@ -135,6 +135,18 @@ section.box{background:var(--surface);border:1px solid var(--line);border-radius
 .rlist{display:grid}
 .vid{display:inline-block;margin-top:4px;font-size:13px;font-weight:600;color:var(--accent);text-decoration:none;padding:2px 0}
 .vid:hover{text-decoration:underline}
+.pm{display:grid;gap:10px;padding:14px}
+.pm h3{font-family:var(--f-display);font-size:20px;margin:0}
+.pm p{margin:0;font-size:15px}
+.pm .acts{display:flex;gap:8px;flex-wrap:wrap}
+.pm .up{position:relative;overflow:hidden;background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.pm .up input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.prev{border:1px solid var(--line);border-radius:10px;padding:12px;display:grid;gap:8px;background:var(--surface2)}
+.prev h4{margin:0;font-size:16px}
+.prev ul{margin:0;padding-left:18px;display:grid;gap:3px;font-size:14px}
+.prev .bad{color:var(--warn)} .prev .muted{color:var(--muted);font-size:13px}
+.go{background:var(--accent);border:0;color:var(--accent-ink);border-radius:9px;height:40px;padding:0 14px;font-weight:600;cursor:pointer}
+.plist .rrow small{display:block;color:var(--muted);font-size:12px}
 .rrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
 /* rules */
 .rules{display:grid;gap:14px}
@@ -347,15 +359,55 @@ function renderRules(){
   (P.rules||[]).map(sec).join('')+
   '<section class="box"><h3>Termine</h3>'+t(dates,['Woche',...DAYS.map((_,d)=>'Tag '+(d+1))])+'</section>'+
   '<section class="box"><h3>Ausgefallene Termine</h3>'+rl+'</section>'+
+  planManager()+
   '<section class="box"><h3>Konto</h3><p>Angemeldet als '+esc(ME.name)+' ('+esc(ME.email)+').</p>'+
    '<div style="display:flex;gap:8px;flex-wrap:wrap"><a class="tbtn" href="/api/export" download>Daten exportieren</a><button type="button" class="tbtn" data-act="logout">Abmelden</button></div></section>'+
   '</div>'}
-function renderMain(){const m=document.getElementById('main');m.innerHTML=S.view==='r'?renderRules():renderSession();refreshNav()}
+function renderMain(){const m=document.getElementById('main');m.innerHTML=S.view==='r'?renderRules():renderSession();refreshNav();if(S.view==='r')loadPlanList()}
+
+/* ---------- Pläne: Vorlage, Download, Hochladen mit Vorschau, Wechseln ---------- */
+let upPlan=null;
+function planManager(){
+  return '<section class="box pm"><h3>Pläne</h3>'+
+   '<p>Neuer Zyklus oder eigener Plan: Vorlage (oder den aktuellen Plan) herunterladen, ausfüllen lassen, z. B. von Claude anhand deines Plan-PDFs, und hier hochladen. Die Anleitung steht in der Datei.</p>'+
+   '<div class="acts"><a class="tbtn" href="/api/plan-template" download>Vorlage herunterladen</a>'+
+   (P?'<a class="tbtn" href="/api/plan/download" download>Aktuellen Plan herunterladen</a>':'')+
+   '<label class="tbtn up">Plan hochladen<input type="file" id="planfile" accept=".json,application/json"></label></div>'+
+   '<div id="planprev"></div><div class="plist" id="plist"></div></section>'}
+async function loadPlanList(){const el=document.getElementById('plist');if(!el)return;
+  try{const r=await api('GET','/api/plans');const d=await r.json();
+    if(d.plans.length<2&&P){el.innerHTML='';return}
+    el.innerHTML=d.plans.map(x=>{const sd=x.start.split('-');
+      return '<div class="rrow"><span>'+esc(x.name)+'<small>ab '+sd[2]+'.'+sd[1]+'.'+sd[0]+' · '+x.weeks+' Wochen · '+x.sessions+' Einheiten</small></span>'+
+       (x.active?'<span class="tbtn on">aktiv</span>':'<button type="button" class="tbtn" data-act="activate" data-v="'+esc(x.id)+'">aktivieren</button>')+'</div>'}).join('')}
+  catch(e){}}
+function showPrev(h){const el=document.getElementById('planprev');if(el)el.innerHTML=h}
+async function checkUpload(file){
+  upPlan=null;showPrev('<div class="prev"><span class="muted">Prüfe '+esc(file.name)+' …</span></div>');
+  let plan;
+  try{plan=JSON.parse(await file.text())}
+  catch(e){showPrev('<div class="prev"><h4 class="bad">Datei nicht lesbar</h4><p class="muted">Das ist kein gültiges JSON. Häufige Ursache: ein Komma zu viel oder zu wenig, oder Text um die Datei herum. '+esc(e.message)+'</p></div>');return}
+  try{const r=await api('POST','/api/plans/check',{plan});const d=await r.json();
+    if(!r.ok)throw new Error(d.message||r.status);
+    const warn=d.warnings.length?'<div><b>Hinweise</b><ul>'+d.warnings.map(w=>'<li>'+esc(w)+'</li>').join('')+'</ul></div>':'';
+    if(!d.ok){showPrev('<div class="prev"><h4 class="bad">'+d.errors.length+' Fehler, bitte in der Datei korrigieren</h4><ul class="bad">'+d.errors.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>'+warn+'</div>');return}
+    upPlan=plan;const s=d.summary;
+    showPrev('<div class="prev"><h4>'+esc(s.name)+(s.subtitle?' · '+esc(s.subtitle):'')+'</h4>'+
+     '<span class="muted">'+s.start+' bis '+s.end+' · '+s.weeks+' Wochen · '+s.days.length+' Tage pro Woche</span>'+
+     s.days.map(t=>'<div><b>'+esc(t.weekday)+' · '+esc(t.title)+'</b><ul>'+t.exercises.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>').join('')+warn+
+     '<div class="acts"><button type="button" class="go" data-act="planok">Übernehmen und aktivieren</button><button type="button" class="tbtn" data-act="planno">Abbrechen</button></div>'+
+     (P?'<span class="muted">„'+esc(P.name)+'“ bleibt mit allen Einträgen erhalten und lässt sich hier wieder aktivieren.</span>':'')+'</div>')}
+  catch(e){if(e.message!=='401')showPrev('<div class="prev"><h4 class="bad">Prüfung fehlgeschlagen</h4><p class="muted">'+esc(e.message)+'</p></div>')}}
+async function savePlanSwitch(fn){clearTimeout(saveT);await flush();await fn();location.reload()}
 
 /* ---------- interactions ---------- */
 const main=document.getElementById('main');
+main.addEventListener('change',ev=>{if(ev.target.id==='planfile'&&ev.target.files[0])checkUpload(ev.target.files[0])});
 main.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');if(!b)return;primeAudio();
   const a=b.dataset.act;
+  if(a==='planno'){upPlan=null;showPrev('');const f=document.getElementById('planfile');if(f)f.value='';return}
+  if(a==='planok'&&upPlan){b.disabled=true;savePlanSwitch(async()=>{const r=await api('POST','/api/plans',{plan:upPlan});if(!r.ok){const d=await r.json().catch(()=>({}));alert(d.message||'Speichern fehlgeschlagen');throw new Error('x')}}).catch(()=>{b.disabled=false});return}
+  if(a==='activate'){b.disabled=true;savePlanSwitch(()=>api('POST','/api/plans/'+b.dataset.v+'/activate',{})).catch(()=>{b.disabled=false});return}
   if(a==='logout'){api('POST','/api/logout',{}).finally(()=>{try{localStorage.removeItem(LKEY);localStorage.removeItem(SKEY)}catch(e){}location.href='/login'});return}
   if(a==='reha'||a==='rehano'){document.getElementById('rehabox').innerHTML=rehaBox(a==='reha');return}
   if(a==='rehaok'){const ds=iso(dateOf(S.w,S.d));if(!sched.reha.includes(ds)){sched.reha.push(ds);sched.reha.sort()}touchSched();return}
@@ -403,7 +455,7 @@ async function init(){
   try{
     const [mr,pr]=await Promise.all([api('GET','/api/me'),api('GET','/api/plan')]);
     ME=await mr.json();
-    if(pr.status===404){document.getElementById('main').innerHTML='<div class="meta"><h2>Noch kein Plan</h2><p>Für dein Konto ist noch kein Trainingsplan hinterlegt.</p></div>';mode='ok';setStatus();return}
+    if(pr.status===404){document.getElementById('main').innerHTML='<div class="meta"><h2>Willkommen, '+esc(ME.name)+'</h2><p>Für dein Konto ist noch kein Trainingsplan hinterlegt. Lade die Vorlage herunter, lass sie mit deinem Plan ausfüllen und lade sie hier hoch.</p></div>'+planManager();document.getElementById('days').hidden=true;mode='ok';setStatus();return}
     P=await pr.json();try{localStorage.setItem('slothly-plan',JSON.stringify(P))}catch(e){}
   }catch(e){if(e.message==='401')return;
     try{P=JSON.parse(localStorage.getItem('slothly-plan'))}catch(x){}

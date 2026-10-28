@@ -4,7 +4,7 @@
 import { readFile } from 'node:fs/promises';
 import { createPool, migrate } from './db.ts';
 import { createLoginLink, normEmail } from './auth.ts';
-import { exportUser, importLogs, importPlan } from './plans.ts';
+import { exportUser, importLogs, importPlan, readPlanFile } from './plans.ts';
 
 const HELP = `Befehle:
   migrate                                  Schema aktualisieren
@@ -55,7 +55,7 @@ try {
     if (!l) throw new Error('Kein aktives Konto mit dieser Adresse');
     console.log(`Gültig 60 Minuten, einmal verwendbar:\n${l.link}`);
   } else if (cmd === 'import-plan') {
-    const id = await importPlan(db, args[0] ?? '', await readJson(args[1]), true);
+    const id = await importPlan(db, args[0] ?? '', readPlanFile(await readJson(args[1])), true);
     console.log(`Plan importiert und aktiv (${id}).`);
   } else if (cmd === 'import-logs') {
     const r = await db.query<{ id: string }>('SELECT p.id FROM plans p JOIN users u ON u.id = p.user_id WHERE u.email = $1 AND p.active', [normEmail(args[0])]);

@@ -6,7 +6,7 @@ import type { FastifyInstance } from 'fastify';
 import { createPool, migrate, type Db } from '../src/db.ts';
 import { loadConfig } from '../src/config.ts';
 import { buildApp } from '../src/server.ts';
-import { importPlan, validatePlan, type PlanFile } from '../src/plans.ts';
+import { importPlan, readPlanFile, validatePlan, type PlanFile } from '../src/plans.ts';
 import type { Mail } from '../src/mail.ts';
 
 const url = process.env.TEST_DATABASE_URL;
@@ -21,7 +21,7 @@ before(async () => {
   await db.query('DROP SCHEMA public CASCADE; CREATE SCHEMA public;');
   await migrate(db);
   await db.query(`INSERT INTO users (email, name) VALUES ('dirk@example.org', 'Dirk'), ('mella@example.org', 'Mella')`);
-  demo = JSON.parse(await readFile(new URL('../seed/demo-plan.json', import.meta.url), 'utf8'));
+  demo = readPlanFile(JSON.parse(await readFile(new URL('../seed/vorlage.json', import.meta.url), 'utf8')));
   await importPlan(db, 'dirk@example.org', demo);
   await importPlan(db, 'mella@example.org', { ...demo, name: 'Mellas Plan' });
   app = await buildApp(cfg, db, { logger: false, mailer: { async send(m) { mails.push(m); } } });
@@ -80,7 +80,7 @@ test('Plan, Logs mit Konfliktauflösung, Ausfalltage und Auswertung', async () =
   assert.equal(plan.name, 'Demo-Plan');
   assert.equal(plan.days.length, 2);
   assert.deepEqual(plan.days[0].ex.map((e: { b: string }) => e.b), ['A', 'B1', 'B2', 'C1', 'C2']);
-  assert.deepEqual(plan.schemes.MAIN[1], [4, '7–8']);
+  assert.deepEqual(plan.schemes.HAUPT[1], [4, '7–8']);
 
   const log = { warm: [true], ex: { A: { sets: [{ kg: '20', r: '10', rpe: '7', d: true }, { kg: '22,5', r: '9', rpe: '8', d: true }], wu: [], note: '' } }, fb: { form: 4 }, updatedAt: 2000 };
   const put = (body: object) => app.inject({ method: 'PUT', url: `/api/plans/${plan.id}/logs/w1d1`, payload: body, headers: { cookie, origin: ORIGIN } });
@@ -101,8 +101,8 @@ test('Plan, Logs mit Konfliktauflösung, Ausfalltage und Auswertung', async () =
 
   const exp = (await app.inject({ url: '/api/export', headers: { cookie } })).json();
   assert.equal(exp.plans[0].logs.logs.w1d1.fb.form, 4);
-  assert.equal(exp.plans[0].plan.format, 'slothly-plan/1');
-  validatePlan(exp.plans[0].plan);   // Export lässt sich wieder importieren (Umzug)
+  assert.equal(exp.plans[0].plan.format, 'slothly-plan/2');
+  readPlanFile(exp.plans[0].plan);   // Export lässt sich wieder importieren (Umzug)
 });
 
 test('fremde Pläne sind nicht erreichbar', async () => {
@@ -121,15 +121,63 @@ test('beide Pläne teilen sich die Übungsbibliothek', async () => {
 });
 
 test('ungültige Pläne werden vor dem Schreiben abgelehnt', () => {
-  assert.throws(() => validatePlan({ ...demo, weeks: 5 }), /braucht genau 5 Wochen/);
+  assert.throws(() => validatePlan({ ...demo, weeks: 5 }), /hat 4 Wochen, der Plan hat 5/);
   const bad = structuredClone(demo); bad.days[0].ex[0].scheme = 'XYZ';
-  assert.throws(() => validatePlan(bad), /Schema XYZ fehlt/);
+  assert.throws(() => validatePlan(bad), /schema "XYZ" ist unter schemata nicht definiert/);
   const bad2 = structuredClone(demo); bad2.days[0].ex[0].b = '<b>';
-  assert.throws(() => validatePlan(bad2), /Label/);
+  assert.throws(() => validatePlan(bad2), /block wie A/);
 });
 
 test('Abmelden beendet die Session', async () => {
   const cookie = await login('dirk@example.org');
   assert.equal((await app.inject({ method: 'POST', url: '/api/logout', payload: {}, headers: { cookie, origin: ORIGIN } })).statusCode, 200);
   assert.equal((await app.inject({ url: '/api/me', headers: { cookie } })).statusCode, 401);
+});
+
+test('Selbstbedienung: Vorlage laden, prüfen, hochladen, zurückwechseln', async () => {
+  const cookie = await login('mella@example.org');
+  const H = { cookie, origin: ORIGIN };
+  const tpl = await app.inject({ url: '/api/plan-template', headers: { cookie } });
+  assert.equal(tpl.statusCode, 200);
+  assert.match(String(tpl.headers['content-disposition']), /attachment/);
+  const vorlage = tpl.json();
+  assert.equal(vorlage.format, 'slothly-plan/2');
+  assert.ok(vorlage._anleitung.length > 3);
+
+  // Fehlerhafte Datei: alle Fehler auf einmal, nichts gespeichert
+  const kaputt = structuredClone(vorlage);
+  kaputt.wochen = 5; kaputt.tage[0].wochentag = 'Feiertag'; kaputt.tage[1].uebungen[0].schema = 'GIBTSNICHT';
+  const chk = (await app.inject({ method: 'POST', url: '/api/plans/check', payload: { plan: kaputt }, headers: H })).json();
+  assert.equal(chk.ok, false);
+  assert.ok(chk.errors.length >= 3, chk.errors.join(' | '));
+  assert.ok(chk.errors.some((e: string) => /wochentag/.test(e)));
+  assert.equal((await app.inject({ method: 'POST', url: '/api/plans', payload: { plan: kaputt }, headers: H })).statusCode, 400);
+
+  // Gültig: Vorschau, dann übernehmen
+  const neu = { ...structuredClone(vorlage), name: 'Mella Zyklus 2', start: '2026-12-07' };
+  const ok = (await app.inject({ method: 'POST', url: '/api/plans/check', payload: { plan: neu }, headers: H })).json();
+  assert.equal(ok.ok, true);
+  assert.equal(ok.summary.start, '07.12.2026');
+  assert.equal(ok.summary.days[0].weekday, 'Mo');
+  const old = (await app.inject({ url: '/api/plan', headers: { cookie } })).json();
+  const up = await app.inject({ method: 'POST', url: '/api/plans', payload: { plan: neu }, headers: H });
+  assert.equal(up.statusCode, 200);
+  assert.equal((await app.inject({ url: '/api/plan', headers: { cookie } })).json().name, 'Mella Zyklus 2');
+
+  const list = (await app.inject({ url: '/api/plans', headers: { cookie } })).json().plans;
+  assert.equal(list.length, 2);
+  assert.deepEqual(list.filter((p: { active: boolean }) => p.active).map((p: { name: string }) => p.name), ['Mella Zyklus 2']);
+
+  // Aktuellen Plan herunterladen = wieder hochladbar (Grundlage für den nächsten Zyklus)
+  const dl = await app.inject({ url: '/api/plan/download', headers: { cookie } });
+  assert.equal(dl.json().name, 'Mella Zyklus 2');
+  assert.equal((await app.inject({ method: 'POST', url: '/api/plans/check', payload: { plan: dl.json() }, headers: H })).json().ok, true);
+
+  // Zurück zum alten Plan
+  assert.equal((await app.inject({ method: 'POST', url: `/api/plans/${old.id}/activate`, payload: {}, headers: H })).statusCode, 200);
+  assert.equal((await app.inject({ url: '/api/plan', headers: { cookie } })).json().id, old.id);
+
+  // Fremden Plan aktivieren geht nicht
+  const dirk = (await app.inject({ url: '/api/plan', headers: { cookie: await login('dirk@example.org') } })).json();
+  assert.equal((await app.inject({ method: 'POST', url: `/api/plans/${dirk.id}/activate`, payload: {}, headers: H })).statusCode, 404);
 });

@@ -44,10 +44,15 @@ SELECT week, set_nr, kg::numeric, reps, rpe
   Regel-Engine (Progression, RPE-Korrektur) Vorschläge rechnen soll.
 - `regions`, `region_load`, `clearances` aus dem Planungsdokument, wenn Schulter-Deckel und
   Freigaben als Daten statt als Text geprüft werden sollen.
-- Plan-Editor in der Oberfläche statt JSON-Import.
+- Plan-Editor in der Oberfläche zusätzlich zum Datei-Upload.
 
-## Importformat
+## Austauschformat
 
-Siehe `seed/demo-plan.json` (Format `slothly-plan/1`). Der Export (`/api/export` bzw.
-`cli.ts export`) liefert Plan und Logs im selben Format, damit lässt sich ein Konto auf
-einen anderen Host umziehen, auch ohne Datenbank-Dump.
+`slothly-plan/2` (siehe `seed/vorlage.json`): lesbare deutsche Feldnamen, Wochentage als
+`Mo` … `So`, Schemata als `{saetze, rpe}` je Woche, Anleitung im Feld `_anleitung`. Gedacht
+zum Ausfüllen von Hand oder durch einen KI-Assistenten. `src/planfile.ts` wandelt es in die
+interne Form um und prüft es vollständig (alle Fehler auf einmal, dazu Hinweise).
+
+Hochladen legt immer einen neuen Plan an und aktiviert ihn; der alte bleibt mit seinen Logs.
+Der Export (`/api/export` bzw. `cli.ts export`) liefert Pläne im selben Format plus Logs,
+damit lässt sich ein Konto auf einen anderen Host umziehen, auch ohne Datenbank-Dump.

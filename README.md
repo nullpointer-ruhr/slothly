@@ -16,7 +16,7 @@ src/          Backend (Node 24 führt TypeScript direkt aus, kein Build)
   cli.ts        Konten, Plan-Import, Export
   migrations/   SQL, läuft beim Start automatisch
 web/          Oberfläche (je eine HTML-Datei, strikte CSP)
-seed/         Demo-Plan im Importformat
+seed/         Plan-Vorlage mit Anleitung (Download in der App)
 docs/         Datenmodell
 ```
 
@@ -36,11 +36,25 @@ Umgebungsvariablen, damit das Image auf jedem Host gleich läuft.
 Keine Passwörter. Auf der Startseite die eigene Adresse eingeben, Link aus der Mail öffnen,
 „Anmelden“ tippen. Konten legt nur die Kommandozeile an, es gibt keine Registrierung.
 
+## Pläne
+
+Jede Person verwaltet ihre Pläne selbst unter **Regeln → Pläne**:
+
+1. *Vorlage herunterladen* (oder *Aktuellen Plan herunterladen* als Grundlage für den nächsten Zyklus).
+2. Ausfüllen: am einfachsten die Datei zusammen mit dem eigenen Plan (PDF, Foto, Text) an Claude geben.
+   Die Anleitung samt Formulierung steht im Feld `_anleitung` der Datei.
+3. *Plan hochladen*: Die App prüft die Datei und zeigt alle Fehler auf einmal oder eine Vorschau.
+   Erst *Übernehmen* speichert. Der bisherige Plan bleibt samt Einträgen erhalten und lässt sich
+   unter *Pläne* wieder aktivieren.
+
+Format: `slothly-plan/2` mit deutschen Feldnamen, siehe `seed/vorlage.json`. Dateien im alten
+Format `slothly-plan/1` nimmt die CLI weiter an.
+
 ## Kommandozeile
 
 ```bash
 node src/cli.ts add-user dirk@example.org Dirk
-node src/cli.ts import-plan dirk@example.org plan.json      # oder - für stdin
+node src/cli.ts import-plan dirk@example.org plan.json      # wie Hochladen in der App; - für stdin
 node src/cli.ts import-logs dirk@example.org logs.json
 node src/cli.ts login-link dirk@example.org                 # ohne Mailversand
 node src/cli.ts users
@@ -57,7 +71,7 @@ docker run -d --name slothly-pg -e POSTGRES_USER=slothly -e POSTGRES_PASSWORD=sl
 npm install
 export DATABASE_URL=postgres://slothly:slothly@localhost:5432/slothly PUBLIC_ORIGIN=http://localhost:8080
 node src/cli.ts migrate && node src/cli.ts add-user ich@example.org Ich
-node src/cli.ts import-plan ich@example.org seed/demo-plan.json
+node src/cli.ts import-plan ich@example.org seed/vorlage.json
 npm start            # dann: node src/cli.ts login-link ich@example.org
 ```
 
