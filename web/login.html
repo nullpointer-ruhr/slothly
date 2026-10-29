@@ -3,7 +3,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Anmelden · Slothly</title>
-<meta name="theme-color" content="#1f4fd1">
+<meta name="theme-color" content="#185953">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Slothly">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -19,6 +19,7 @@
 [hidden]{display:none!important}
 body{margin:0;min-height:100vh;display:grid;place-items:center;background:var(--bg);color:var(--ink);font:16px/1.45 "Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;padding:16px}
 main{width:100%;max-width:380px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:26px 22px;display:grid;gap:16px}
+img.logo{display:block;width:calc(100% + 44px);height:auto;margin:-26px -22px 4px;border-radius:13px 13px 0 0}
 h1{margin:0;font:700 30px/1 "Barlow Condensed","Arial Narrow",sans-serif;letter-spacing:.02em;text-transform:uppercase}
 p{margin:0;color:var(--muted)}
 label{display:grid;gap:6px;font-size:14px;color:var(--muted)}
@@ -33,7 +34,7 @@ button.link{background:none;color:var(--accent);height:auto;font-size:15px;font-
 </style>
 </head><body>
 <main>
-  <h1>Slothly</h1>
+  <img class="logo" src="/logo.jpg" width="552" height="432" alt="Slothly">
   <form id="req" hidden novalidate>
     <p style="margin-bottom:14px">Gib deine E-Mail-Adresse ein. Du bekommst einen Code, mit dem du dich hier anmeldest.</p>
     <label>E-Mail<input id="email" name="email" type="email" autocomplete="email" inputmode="email" autocapitalize="off" spellcheck="false"></label>
