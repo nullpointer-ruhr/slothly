@@ -201,6 +201,9 @@ function iso(x){return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0'
 function slotDate(n){const x=new Date(START);x.setDate(x.getDate()+Math.floor(n/ND)*7+OFFS[n%ND]);return x}
 function slotOf(w,d){const k=(w-1)*ND+d,R=new Set(sched.reha);let c=-1;for(let n=0;;n++){if(!R.has(iso(slotDate(n)))){c++;if(c===k)return n}}}
 function dateOf(w,d){return slotDate(slotOf(w,d))}
+/* Angezeigtes Datum: tatsächlicher Trainingstag, falls eingetragen, sonst der geplante Termin. */
+function shownDate(w,d){const L=logs[ID(w,d)];if(L&&/^\d{4}-\d{2}-\d{2}$/.test(L.doneOn||'')){const p=L.doneOn.split('-');return new Date(+p[0],p[1]-1,+p[2])}return dateOf(w,d)}
+const isDone=(w,d)=>{const L=logs[ID(w,d)];return !!(L&&L.doneOn)}
 function shiftOf(w,d){return slotOf(w,d)-((w-1)*ND+d)}
 function nextFree(w,d){const R=new Set(sched.reha);let n=slotOf(w,d)+1;while(R.has(iso(slotDate(n))))n++;return slotDate(n)}
 const wdOf=x=>WD[x.getDay()];
@@ -286,16 +289,16 @@ window.addEventListener('online',()=>{if(P)pull()});
 /* ---------- navigation ---------- */
 const S={w:1,d:0,view:'s'};
 function pickToday(){const t=new Date();t.setHours(0,0,0,0);
-  for(let w=1;w<=NW;w++)for(let d=0;d<ND;d++){if(dateOf(w,d)>=t){S.w=w;S.d=d;return}}S.w=NW;S.d=ND-1}
+  for(let w=1;w<=NW;w++)for(let d=0;d<ND;d++){if(!isDone(w,d)&&dateOf(w,d)>=t||isDone(w,d)&&shownDate(w,d).getTime()===t.getTime()){S.w=w;S.d=d;return}}S.w=NW;S.d=ND-1}
 function progress(w,d){const L=logs[ID(w,d)];let tot=0,done=0;
   DAYS[d].ex.forEach(e=>{const n=rx(e,w).n;tot+=n;const E=L&&L.ex&&L.ex[e.b];if(E&&E.sets)for(let i=0;i<n;i++)if(E.sets[i]&&E.sets[i].d)done++});return{tot,done}}
 function refreshNav(){
   let h='';for(let w=1;w<=NW;w++){let dots='';for(let d=0;d<ND;d++){const p=progress(w,d);dots+='<i class="'+(p.done>=p.tot?'f':p.done?'p':'')+'"></i>'}
-    h+='<button type="button" class="wk'+(S.view==='s'&&S.w===w?' on':'')+'" data-w="'+w+'">W'+w+'<small>'+fmtD(dateOf(w,0))+'</small><span class="dots">'+dots+'</span></button>'}
+    h+='<button type="button" class="wk'+(S.view==='s'&&S.w===w?' on':'')+'" data-w="'+w+'">W'+w+'<small>'+fmtD(shownDate(w,0))+'</small><span class="dots">'+dots+'</span></button>'}
   h+='<button type="button" class="wk'+(S.view==='r'?' on':'')+'" data-rules="1">§<small>Regeln</small><span class="dots"></span></button>';
   document.getElementById('weeks').innerHTML=h;
   let dh='';DAYS.forEach((D,d)=>{const p=progress(S.w,d);
-    const dt=dateOf(S.w,d);
+    const dt=shownDate(S.w,d);
     dh+='<button type="button" class="day'+(S.view==='s'&&S.d===d?' on':'')+'" data-d="'+d+'"><b>'+wdOf(dt)+' '+fmtD(dt)+(p.done>=p.tot?' <span class="ok">✓</span>':'')+'</b><small>'+esc(D.title)+'</small></button>'});
   document.getElementById('days').innerHTML=dh;
   const pb=document.getElementById('pbar');if(pb){const p=progress(S.w,S.d);pb.style.width=(p.tot?p.done/p.tot*100:0)+'%';document.getElementById('plbl').textContent=p.done+' / '+p.tot+' Sätze'}}
@@ -311,7 +314,7 @@ function rehaBox(conf){const w=S.w,d=S.d,dt=dateOf(w,d),nx=nextFree(w,d);
   if(!conf)return '<button type="button" class="rehabtn" data-act="reha">Heute aussetzen · Einheit verschieben</button>';
   return '<div class="rconf"><span>'+wdOf(dt)+' '+fmtD(dt)+' fällt aus. Diese Einheit rückt auf <b>'+wdOf(nx)+' '+fmtD(nx)+'</b>, alle folgenden Einheiten je einen Termin weiter.</span>'+
    '<div class="btns"><button type="button" class="go" data-act="rehaok">Überspringen</button><button type="button" class="tbtn" data-act="rehano">Abbrechen</button></div></div>'}
-function renderSession(){const w=S.w,d=S.d,D=DAYS[d],id=ID(w,d),L=getLog(id),dt=dateOf(w,d),sh=shiftOf(w,d);
+function renderSession(){const w=S.w,d=S.d,D=DAYS[d],id=ID(w,d),L=getLog(id),dt=shownDate(w,d),sh=L.doneOn?0:shiftOf(w,d);
   let h='<div class="meta"><div><span class="phase">Woche '+w+' · '+esc(PHASE[w-1]||'')+'</span><h2>Tag '+(d+1)+' · '+esc(D.title)+'</h2></div>'+
    '<p>'+wdOf(dt)+', '+fmtD(dt)+dt.getFullYear()+(P.dayNote?' · '+esc(P.dayNote):'')+'</p>'+
    (sh?'<p class="shift">Wegen Ausfall um '+sh+' Termin'+(sh>1?'e':'')+' verschoben</p>':'')+
@@ -330,6 +333,7 @@ function renderSession(){const w=S.w,d=S.d,D=DAYS[d],id=ID(w,d),L=getLog(id),dt=
   h+='<section class="box"><div class="boxh"><h3>Feedback</h3></div><div class="fb">'+
    '<div><div class="formhint" style="margin-bottom:6px">Tagesform</div><div class="form5" id="form5">'+[1,2,3,4,5].map(n=>'<button type="button" data-act="form" data-v="'+n+'" class="'+(F.form==n?'on':'')+'">'+n+'</button>').join('')+'</div>'+
    '<div class="formhint'+(F.form&&F.form<=2?' low':'')+'" id="formhint" style="margin-top:6px">'+formHint(F.form)+'</div></div>'+
+   '<label>Trainiert am (für Nachträge ändern)<input type="date" id="fb-date-'+id+'" data-done="1" value="'+esc(L.doneOn||'')+'"></label>'+
    '<div class="row"><label>Dauer (min)<input id="fb-dur-'+id+'" data-fb="dur" inputmode="numeric" value="'+esc(F.dur)+'"></label><label>Schlaf (h)<input id="fb-sl-'+id+'" data-fb="sleep" inputmode="decimal" value="'+esc(F.sleep)+'"></label><label>Gewicht (kg)<input id="fb-bw-'+id+'" data-fb="bw" inputmode="decimal" value="'+esc(F.bw)+'"></label></div>'+
    '<label>Schmerzen / Beschwerden (wo, Übung, 0–10, Folgetag)<textarea id="fb-p-'+id+'" data-fb="pain">'+esc(F.pain)+'</textarea></label>'+
    '<label>Was war zu leicht, was zu schwer?<textarea id="fb-e-'+id+'" data-fb="easy">'+esc(F.easy)+'</textarea></label>'+
@@ -360,7 +364,7 @@ function renderEx(e,w,d,L){const R=rx(e,w),E=exLog(L,e.b),id=ID(w,d),reha=e.b[0]
 const md=t=>esc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
 function renderRules(){
   const t=(rows,head)=>'<div class="tw"><table><thead><tr>'+head.map(x=>'<th>'+md(x)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(x=>'<td>'+md(x)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
-  let dates=[];for(let w=1;w<=NW;w++)dates.push(['W'+w,...DAYS.map((_,d)=>{const x=dateOf(w,d);return wdOf(x)+' '+fmtD(x)})]);
+  let dates=[];for(let w=1;w<=NW;w++)dates.push(['W'+w,...DAYS.map((_,d)=>{const x=shownDate(w,d);return wdOf(x)+' '+fmtD(x)+(isDone(w,d)?' ✓':'')})]);
   const end=dateOf(NW,ND-1),st=dateOf(1,0);
   const rl=sched.reha.length?'<div class="rlist">'+sched.reha.map(x=>{const p=x.split('-'),dt=new Date(+p[0],p[1]-1,+p[2]);
     return '<div class="rrow"><span>'+wdOf(dt)+' '+fmtD(dt)+p[0]+'</span><button type="button" class="tbtn" data-act="unreha" data-v="'+x+'">zurücknehmen</button></div>'}).join('')+'</div>'
@@ -475,14 +479,17 @@ main.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');if(!b
   else if(a==='form'){const v=+b.dataset.v;L.fb.form=L.fb.form===v?null:v;document.querySelectorAll('#form5 button').forEach(x=>x.classList.toggle('on',+x.dataset.v===L.fb.form));
     const fh=document.getElementById('formhint');fh.textContent=formHint(L.fb.form);fh.classList.toggle('low',!!L.fb.form&&L.fb.form<=2)}
   else if(a==='set'){const E=exLog(L,b.dataset.b),i=+b.dataset.i;const s=E.sets[i]=E.sets[i]||{};s.d=!s.d;
+    if(s.d&&!L.doneOn){L.doneOn=iso(new Date());const fi=document.getElementById('fb-date-'+id);if(fi)fi.value=L.doneOn}
     if(s.d){const row=b.closest('.sr');['kg','r'].forEach(k=>{if(!s[k]){const inp=row.querySelector('[data-k="'+k+'"]');const ph=inp.placeholder;if(ph&&/^[\d.,]+$/.test(ph)){s[k]=ph;inp.value=ph}}})}
     b.classList.toggle('on',s.d);b.closest('.sr').classList.toggle('done',s.d);
     if(s.d){const e=DAYS[S.d].ex.find(x=>x.b===b.dataset.b);let sec=pauseSec(e.pa);if(sec)startTimer(sec,e.b+' · '+e.n+' · Pause '+e.pa)}}
   touch(id)});
+main.addEventListener('change',ev=>{if(ev.target.dataset&&ev.target.dataset.done)ev.target.dispatchEvent(new Event('input',{bubbles:true}))});
 main.addEventListener('input',ev=>{const t=ev.target;const id=ID(S.w,S.d),L=getLog(id);
   if(t.dataset.k){const E=exLog(L,t.dataset.b),i=+t.dataset.i;const s=E.sets[i]=E.sets[i]||{};s[t.dataset.k]=t.value.trim()}
   else if(t.dataset.note){exLog(L,t.dataset.note).note=t.value}
-  else if(t.dataset.fb){L.fb[t.dataset.fb]=t.value}else return;
+  else if(t.dataset.fb){L.fb[t.dataset.fb]=t.value}
+  else if(t.dataset.done){if(/^\d{4}-\d{2}-\d{2}$/.test(t.value))L.doneOn=t.value;else delete L.doneOn}else return;
   touch(id)});
 
 /* ---------- rest timer ---------- */
