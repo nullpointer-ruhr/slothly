@@ -216,3 +216,30 @@ test('Anmeldung mit Code: in der Mail, Fehlversuche begrenzt, nur der neueste gi
   assert.equal((await app.inject({ url: '/api/me', headers: { cookie: `${cookie.name}=${cookie.value}` } })).json().name, 'Mella');
   assert.equal((await send(code(m4))).statusCode, 400, 'Code nur einmal verwendbar');
 });
+
+test('Zyklus neu starten und löschen: nur mit Bestätigung, alte Geräte werden abgewiesen', async () => {
+  const cookie = await login('dirk@example.org');
+  const H = { cookie, origin: ORIGIN };
+  const plan = (await app.inject({ url: '/api/plan', headers: { cookie } })).json();
+  const rev = plan.revision;
+  const put = (r: number) => app.inject({ method: 'PUT', url: `/api/plans/${plan.id}/logs/w2d1?rev=${r}`, payload: { ex: {}, updatedAt: Date.now() }, headers: H });
+  assert.equal((await put(rev)).statusCode, 200);
+
+  assert.equal((await app.inject({ method: 'POST', url: `/api/plans/${plan.id}/restart`, payload: { start: '2026-11-09' }, headers: H })).statusCode, 400);
+  assert.equal((await app.inject({ method: 'POST', url: `/api/plans/${plan.id}/restart`, payload: { start: '2026-11-09', confirm: 'neustart' }, headers: H })).statusCode, 200);
+  const after = (await app.inject({ url: `/api/plans/${plan.id}/logs`, headers: { cookie } })).json();
+  assert.deepEqual(after.logs, {});
+  assert.equal(after.revision, rev + 1);
+  assert.equal((await app.inject({ url: '/api/plan', headers: { cookie } })).json().startDate, '2026-11-09');
+  const stale = await put(rev);   // Gerät mit Stand von vor dem Neustart
+  assert.equal(stale.statusCode, 409);
+  assert.equal(stale.json().reload, true);
+
+  const before = (await app.inject({ url: '/api/plans', headers: { cookie } })).json().plans.length;
+  assert.equal((await app.inject({ method: 'DELETE', url: `/api/plans/${plan.id}`, payload: {}, headers: H })).statusCode, 400);
+  assert.equal((await app.inject({ method: 'DELETE', url: `/api/plans/${plan.id}`, payload: { confirm: 'loeschen' }, headers: H })).statusCode, 200);
+  assert.equal((await app.inject({ url: '/api/plans', headers: { cookie } })).json().plans.length, before - 1);
+  const mella = await login('mella@example.org');
+  const mp = (await app.inject({ url: '/api/plan', headers: { cookie: mella } })).json();
+  assert.equal((await app.inject({ method: 'DELETE', url: `/api/plans/${mp.id}`, payload: { confirm: 'loeschen' }, headers: H })).statusCode, 404, 'fremder Plan');
+});
