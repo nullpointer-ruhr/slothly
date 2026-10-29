@@ -147,6 +147,13 @@ section.box{background:var(--surface);border:1px solid var(--line);border-radius
 .prev .bad{color:var(--warn)} .prev .muted{color:var(--muted);font-size:13px}
 .go{background:var(--accent);border:0;color:var(--accent-ink);border-radius:9px;height:40px;padding:0 14px;font-weight:600;cursor:pointer}
 .plist .rrow small{display:block;color:var(--muted);font-size:12px}
+.plist{display:grid;gap:4px}
+.prow{border-bottom:1px solid var(--line);padding-bottom:8px}
+.prow .rrow{border-bottom:0}
+.acts.small{gap:6px}
+.tbtn.danger{color:var(--warn);border-color:color-mix(in srgb,var(--warn) 45%,var(--line))}
+.pconf .rconf{margin-top:8px}
+.pconf .btns .tbtn{height:40px;display:inline-flex;align-items:center}
 .rrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
 /* rules */
 .rules{display:grid;gap:14px}
@@ -194,6 +201,9 @@ function iso(x){return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0'
 function slotDate(n){const x=new Date(START);x.setDate(x.getDate()+Math.floor(n/ND)*7+OFFS[n%ND]);return x}
 function slotOf(w,d){const k=(w-1)*ND+d,R=new Set(sched.reha);let c=-1;for(let n=0;;n++){if(!R.has(iso(slotDate(n)))){c++;if(c===k)return n}}}
 function dateOf(w,d){return slotDate(slotOf(w,d))}
+/* Angezeigtes Datum: tatsächlicher Trainingstag, falls eingetragen, sonst der geplante Termin. */
+function shownDate(w,d){const L=logs[ID(w,d)];if(L&&/^\d{4}-\d{2}-\d{2}$/.test(L.doneOn||'')){const p=L.doneOn.split('-');return new Date(+p[0],p[1]-1,+p[2])}return dateOf(w,d)}
+const isDone=(w,d)=>{const L=logs[ID(w,d)];return !!(L&&L.doneOn)}
 function shiftOf(w,d){return slotOf(w,d)-((w-1)*ND+d)}
 function nextFree(w,d){const R=new Set(sched.reha);let n=slotOf(w,d)+1;while(R.has(iso(slotDate(n))))n++;return slotDate(n)}
 const wdOf=x=>WD[x.getDay()];
@@ -228,12 +238,16 @@ function setStatus(){const el=document.getElementById('status');
   if(mode==='err'){el.className='status err';el.innerHTML='<b></b>Speichern fehlgeschlagen';return}
   if(mode==='init'){el.className='status';el.innerHTML='<b></b>verbindet…';return}
   el.className='status '+(pend?'busy':'ok');el.innerHTML='<b></b>'+(pend?'speichert…':'gespeichert')}
+/* Plan wurde gelöscht oder neu gestartet (anderes Gerät): lokalen Stand verwerfen, neu laden. */
+function dropAndReload(){try{localStorage.removeItem(LKEY);localStorage.removeItem(SKEY);localStorage.removeItem('slothly-plan')}catch(e){}location.reload()}
+const revQ=()=>'?rev='+(P.revision||0);
 function retryLater(){clearTimeout(retryT);retryT=setTimeout(()=>{flush();flushSched()},5000)}
 let schedPend=false;
 function touchSched(){sched.updatedAt=Date.now();try{localStorage.setItem(SKEY,JSON.stringify(sched))}catch(e){}schedPend=true;flushSched();renderMain();window.scrollTo(0,0)}
 async function flushSched(){if(!schedPend||mode==='init')return;schedPend=false;
-  try{const r=await api('PUT','/api/plans/'+P.id+'/skips',{dates:sched.reha.slice(),updatedAt:sched.updatedAt});
-    if(r.status===409){const d=await r.json();sched={reha:d.dates||[],updatedAt:d.updatedAt||0};try{localStorage.setItem(SKEY,JSON.stringify(sched))}catch(e){}renderMain()}
+  try{const r=await api('PUT','/api/plans/'+P.id+'/skips'+revQ(),{dates:sched.reha.slice(),updatedAt:sched.updatedAt});
+    if(r.status===404)return dropAndReload();
+    if(r.status===409){const d=await r.json();if(d.reload)return dropAndReload();sched={reha:d.dates||[],updatedAt:d.updatedAt||0};try{localStorage.setItem(SKEY,JSON.stringify(sched))}catch(e){}renderMain()}
     else if(!r.ok)throw new Error(r.status);
     mode='ok'}
   catch(e){schedPend=true;mode='offline';retryLater()}
@@ -242,8 +256,9 @@ function touch(id){ver[id]=(ver[id]||0)+1;logs[id].updatedAt=Date.now();saveLoca
 function saveLocal(){try{localStorage.setItem(LKEY,JSON.stringify(logs))}catch(e){}}
 async function flush(){if(mode==='init')return;
   for(const id of Object.keys(ver)){if(ver[id]===saved[id]||inflight[id])continue;inflight[id]=true;const v=ver[id];
-    try{const r=await api('PUT','/api/plans/'+P.id+'/logs/'+id,logs[id]);
-      if(r.status===409){const d=await r.json();if(d.data){logs[id]=d.data;saveLocal();if(id===ID(S.w,S.d)&&S.view==='s')renderMain()}saved[id]=ver[id];mode='ok'}
+    try{const r=await api('PUT','/api/plans/'+P.id+'/logs/'+id+revQ(),logs[id]);
+      if(r.status===404)return dropAndReload();
+      if(r.status===409){const d=await r.json();if(d.reload)return dropAndReload();if(d.data){logs[id]=d.data;saveLocal();if(id===ID(S.w,S.d)&&S.view==='s')renderMain()}saved[id]=ver[id];mode='ok'}
       else if(r.ok){saved[id]=v;mode='ok'}
       else{mode='err'}}
     catch(e){mode='offline';retryLater()}
@@ -252,8 +267,9 @@ async function flush(){if(mode==='init')return;
 /* Serverstand holen und mit dem lokalen Stand zusammenführen: neuerer Zeitstempel gewinnt,
    lokale Änderungen ohne Bestätigung werden danach hochgeladen. */
 async function pull(){
-  try{const r=await api('GET','/api/plans/'+P.id+'/logs');if(!r.ok)throw new Error(r.status);
+  try{const r=await api('GET','/api/plans/'+P.id+'/logs');if(r.status===404)return dropAndReload();if(!r.ok)throw new Error(r.status);
     const d=await r.json(),cur=ID(S.w,S.d);let curChanged=false;
+    if((d.revision||0)!==(P.revision||0))return dropAndReload();
     for(const [id,remote] of Object.entries(d.logs||{})){if(ver[id]!==undefined&&ver[id]!==saved[id])continue;
       const local=logs[id];
       if(local&&(local.updatedAt||0)>(remote.updatedAt||0)){ver[id]=(ver[id]||0)+1;continue}
@@ -273,16 +289,16 @@ window.addEventListener('online',()=>{if(P)pull()});
 /* ---------- navigation ---------- */
 const S={w:1,d:0,view:'s'};
 function pickToday(){const t=new Date();t.setHours(0,0,0,0);
-  for(let w=1;w<=NW;w++)for(let d=0;d<ND;d++){if(dateOf(w,d)>=t){S.w=w;S.d=d;return}}S.w=NW;S.d=ND-1}
+  for(let w=1;w<=NW;w++)for(let d=0;d<ND;d++){if(!isDone(w,d)&&dateOf(w,d)>=t||isDone(w,d)&&shownDate(w,d).getTime()===t.getTime()){S.w=w;S.d=d;return}}S.w=NW;S.d=ND-1}
 function progress(w,d){const L=logs[ID(w,d)];let tot=0,done=0;
   DAYS[d].ex.forEach(e=>{const n=rx(e,w).n;tot+=n;const E=L&&L.ex&&L.ex[e.b];if(E&&E.sets)for(let i=0;i<n;i++)if(E.sets[i]&&E.sets[i].d)done++});return{tot,done}}
 function refreshNav(){
   let h='';for(let w=1;w<=NW;w++){let dots='';for(let d=0;d<ND;d++){const p=progress(w,d);dots+='<i class="'+(p.done>=p.tot?'f':p.done?'p':'')+'"></i>'}
-    h+='<button type="button" class="wk'+(S.view==='s'&&S.w===w?' on':'')+'" data-w="'+w+'">W'+w+'<small>'+fmtD(dateOf(w,0))+'</small><span class="dots">'+dots+'</span></button>'}
+    h+='<button type="button" class="wk'+(S.view==='s'&&S.w===w?' on':'')+'" data-w="'+w+'">W'+w+'<small>'+fmtD(shownDate(w,0))+'</small><span class="dots">'+dots+'</span></button>'}
   h+='<button type="button" class="wk'+(S.view==='r'?' on':'')+'" data-rules="1">§<small>Regeln</small><span class="dots"></span></button>';
   document.getElementById('weeks').innerHTML=h;
   let dh='';DAYS.forEach((D,d)=>{const p=progress(S.w,d);
-    const dt=dateOf(S.w,d);
+    const dt=shownDate(S.w,d);
     dh+='<button type="button" class="day'+(S.view==='s'&&S.d===d?' on':'')+'" data-d="'+d+'"><b>'+wdOf(dt)+' '+fmtD(dt)+(p.done>=p.tot?' <span class="ok">✓</span>':'')+'</b><small>'+esc(D.title)+'</small></button>'});
   document.getElementById('days').innerHTML=dh;
   const pb=document.getElementById('pbar');if(pb){const p=progress(S.w,S.d);pb.style.width=(p.tot?p.done/p.tot*100:0)+'%';document.getElementById('plbl').textContent=p.done+' / '+p.tot+' Sätze'}}
@@ -298,7 +314,7 @@ function rehaBox(conf){const w=S.w,d=S.d,dt=dateOf(w,d),nx=nextFree(w,d);
   if(!conf)return '<button type="button" class="rehabtn" data-act="reha">Heute aussetzen · Einheit verschieben</button>';
   return '<div class="rconf"><span>'+wdOf(dt)+' '+fmtD(dt)+' fällt aus. Diese Einheit rückt auf <b>'+wdOf(nx)+' '+fmtD(nx)+'</b>, alle folgenden Einheiten je einen Termin weiter.</span>'+
    '<div class="btns"><button type="button" class="go" data-act="rehaok">Überspringen</button><button type="button" class="tbtn" data-act="rehano">Abbrechen</button></div></div>'}
-function renderSession(){const w=S.w,d=S.d,D=DAYS[d],id=ID(w,d),L=getLog(id),dt=dateOf(w,d),sh=shiftOf(w,d);
+function renderSession(){const w=S.w,d=S.d,D=DAYS[d],id=ID(w,d),L=getLog(id),dt=shownDate(w,d),sh=L.doneOn?0:shiftOf(w,d);
   let h='<div class="meta"><div><span class="phase">Woche '+w+' · '+esc(PHASE[w-1]||'')+'</span><h2>Tag '+(d+1)+' · '+esc(D.title)+'</h2></div>'+
    '<p>'+wdOf(dt)+', '+fmtD(dt)+dt.getFullYear()+(P.dayNote?' · '+esc(P.dayNote):'')+'</p>'+
    (sh?'<p class="shift">Wegen Ausfall um '+sh+' Termin'+(sh>1?'e':'')+' verschoben</p>':'')+
@@ -317,6 +333,7 @@ function renderSession(){const w=S.w,d=S.d,D=DAYS[d],id=ID(w,d),L=getLog(id),dt=
   h+='<section class="box"><div class="boxh"><h3>Feedback</h3></div><div class="fb">'+
    '<div><div class="formhint" style="margin-bottom:6px">Tagesform</div><div class="form5" id="form5">'+[1,2,3,4,5].map(n=>'<button type="button" data-act="form" data-v="'+n+'" class="'+(F.form==n?'on':'')+'">'+n+'</button>').join('')+'</div>'+
    '<div class="formhint'+(F.form&&F.form<=2?' low':'')+'" id="formhint" style="margin-top:6px">'+formHint(F.form)+'</div></div>'+
+   '<label>Trainiert am (für Nachträge ändern)<input type="date" id="fb-date-'+id+'" data-done="1" value="'+esc(L.doneOn||'')+'"></label>'+
    '<div class="row"><label>Dauer (min)<input id="fb-dur-'+id+'" data-fb="dur" inputmode="numeric" value="'+esc(F.dur)+'"></label><label>Schlaf (h)<input id="fb-sl-'+id+'" data-fb="sleep" inputmode="decimal" value="'+esc(F.sleep)+'"></label><label>Gewicht (kg)<input id="fb-bw-'+id+'" data-fb="bw" inputmode="decimal" value="'+esc(F.bw)+'"></label></div>'+
    '<label>Schmerzen / Beschwerden (wo, Übung, 0–10, Folgetag)<textarea id="fb-p-'+id+'" data-fb="pain">'+esc(F.pain)+'</textarea></label>'+
    '<label>Was war zu leicht, was zu schwer?<textarea id="fb-e-'+id+'" data-fb="easy">'+esc(F.easy)+'</textarea></label>'+
@@ -347,7 +364,7 @@ function renderEx(e,w,d,L){const R=rx(e,w),E=exLog(L,e.b),id=ID(w,d),reha=e.b[0]
 const md=t=>esc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
 function renderRules(){
   const t=(rows,head)=>'<div class="tw"><table><thead><tr>'+head.map(x=>'<th>'+md(x)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(x=>'<td>'+md(x)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
-  let dates=[];for(let w=1;w<=NW;w++)dates.push(['W'+w,...DAYS.map((_,d)=>{const x=dateOf(w,d);return wdOf(x)+' '+fmtD(x)})]);
+  let dates=[];for(let w=1;w<=NW;w++)dates.push(['W'+w,...DAYS.map((_,d)=>{const x=shownDate(w,d);return wdOf(x)+' '+fmtD(x)+(isDone(w,d)?' ✓':'')})]);
   const end=dateOf(NW,ND-1),st=dateOf(1,0);
   const rl=sched.reha.length?'<div class="rlist">'+sched.reha.map(x=>{const p=x.split('-'),dt=new Date(+p[0],p[1]-1,+p[2]);
     return '<div class="rrow"><span>'+wdOf(dt)+' '+fmtD(dt)+p[0]+'</span><button type="button" class="tbtn" data-act="unreha" data-v="'+x+'">zurücknehmen</button></div>'}).join('')+'</div>'
@@ -374,13 +391,49 @@ function planManager(){
    (P?'<a class="tbtn" href="/api/plan/download" download>Aktuellen Plan herunterladen</a>':'')+
    '<label class="tbtn up">Plan hochladen<input type="file" id="planfile" accept=".json,application/json"></label></div>'+
    '<div id="planprev"></div><div class="plist" id="plist"></div></section>'}
+let PLANS=[];
+const dmy=x=>{const p=x.split('-');return p[2]+'.'+p[1]+'.'+p[0]};
+function mondayIso(){const t=new Date();t.setHours(12,0,0,0);t.setDate(t.getDate()-((t.getDay()+6)%7));return iso(t)}
 async function loadPlanList(){const el=document.getElementById('plist');if(!el)return;
-  try{const r=await api('GET','/api/plans');const d=await r.json();
-    if(d.plans.length<2&&P){el.innerHTML='';return}
-    el.innerHTML=d.plans.map(x=>{const sd=x.start.split('-');
-      return '<div class="rrow"><span>'+esc(x.name)+'<small>ab '+sd[2]+'.'+sd[1]+'.'+sd[0]+' · '+x.weeks+' Wochen · '+x.sessions+' Einheiten</small></span>'+
-       (x.active?'<span class="tbtn on">aktiv</span>':'<button type="button" class="tbtn" data-act="activate" data-v="'+esc(x.id)+'">aktivieren</button>')+'</div>'}).join('')}
+  try{const r=await api('GET','/api/plans');const d=await r.json();PLANS=d.plans;
+    el.innerHTML=PLANS.length?'<b style="font-size:14px">Deine Zyklen</b>'+PLANS.map(x=>
+      '<div class="prow"><div class="rrow"><span>'+esc(x.name)+'<small>ab '+dmy(x.start)+' · '+x.weeks+' Wochen · '+x.sessions+' Einheiten</small></span>'+
+       (x.active?'<span class="tbtn on">aktiv</span>':'<button type="button" class="tbtn" data-act="activate" data-v="'+esc(x.id)+'">aktivieren</button>')+'</div>'+
+       '<div class="acts small"><button type="button" class="tbtn" data-act="pask" data-k="restart" data-v="'+esc(x.id)+'">Neu starten</button>'+
+       '<button type="button" class="tbtn danger" data-act="pask" data-k="delete" data-v="'+esc(x.id)+'">Löschen</button></div>'+
+       '<div class="pconf" data-for="'+esc(x.id)+'"></div></div>').join(''):''}
   catch(e){}}
+/* Zweistufig: Schritt 1 erklärt, was verloren geht (mit Export), Schritt 2 fragt endgültig. */
+function planConfirm(kind,id,step){
+  document.querySelectorAll('.pconf').forEach(x=>x.innerHTML='');
+  const x=PLANS.find(p=>p.id===id);if(!x)return;
+  const el=document.querySelector('.pconf[data-for="'+id+'"]');
+  const n=x.sessions,lost=n?'<b>'+n+' eingetragene Einheit'+(n===1?'':'en')+'</b>':'keine eingetragenen Einheiten';
+  const exp='<a class="tbtn" href="/api/export" download>Vorher alle Daten exportieren</a>';
+  const cancel='<button type="button" class="tbtn" data-act="pcancel">Abbrechen</button>';
+  if(kind==='delete'){
+    el.innerHTML=step===1
+     ?'<div class="rconf"><span><b>„'+esc(x.name)+'“ löschen?</b> Gelöscht werden der Plan und '+lost+'.'+(x.active&&PLANS.length>1?' Danach wird dein jüngster anderer Zyklus aktiv.':'')+'</span>'+
+       '<div class="btns"><button type="button" class="go" data-act="pstep" data-k="delete" data-v="'+esc(id)+'">Weiter</button>'+cancel+exp+'</div></div>'
+     :'<div class="rconf"><span><b>Wirklich endgültig löschen?</b> Das lässt sich nicht rückgängig machen.</span>'+
+       '<div class="btns"><button type="button" class="go" data-act="pdo" data-k="delete" data-v="'+esc(id)+'">Ja, „'+esc(x.name)+'“ endgültig löschen</button>'+cancel+'</div></div>'}
+  else{
+    el.innerHTML=step===1
+     ?'<div class="rconf"><span><b>„'+esc(x.name)+'“ neu starten?</b> Der Plan bleibt, aber '+lost+' und alle Ausfalltage werden gelöscht. Woche 1 beginnt am gewählten Tag.</span>'+
+       '<label style="display:grid;gap:4px;font-size:13px">Neuer Start (Montag der ersten Woche)<input type="date" id="pstart" value="'+mondayIso()+'" style="height:40px;border:1px solid var(--line);border-radius:9px;padding:0 10px;background:var(--surface);font-size:16px"></label>'+
+       '<div class="btns"><button type="button" class="go" data-act="pstep" data-k="restart" data-v="'+esc(id)+'">Weiter</button>'+cancel+exp+'</div></div>'
+     :'<div class="rconf"><span><b>Wirklich neu starten?</b> '+(n?'Die '+n+' Einheit'+(n===1?'':'en')+' sind danach weg, das lässt sich nicht rückgängig machen. ':'')+'Neuer Start: <b>'+dmy(el.dataset.start)+'</b>.</span>'+
+       '<div class="btns"><button type="button" class="go" data-act="pdo" data-k="restart" data-v="'+esc(id)+'">Ja, endgültig neu starten</button>'+cancel+'</div></div>'}
+  el.scrollIntoView({block:'nearest'})}
+async function planDo(kind,id,btn){btn.disabled=true;
+  const el=document.querySelector('.pconf[data-for="'+id+'"]');
+  try{clearTimeout(saveT);if(P&&P.id!==id)await flush();
+    const r=kind==='delete'?await api('DELETE','/api/plans/'+id,{confirm:'loeschen'})
+                           :await api('POST','/api/plans/'+id+'/restart',{confirm:'neustart',start:el.dataset.start});
+    if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.message||'Fehler '+r.status)}
+    if(P&&P.id===id)return dropAndReload();
+    location.reload()}
+  catch(e){if(e.message!=='401'){el.innerHTML='<div class="rconf"><span>'+esc(e.message)+'</span></div>'}btn.disabled=false}}
 function showPrev(h){const el=document.getElementById('planprev');if(el)el.innerHTML=h}
 async function checkUpload(file){
   upPlan=null;showPrev('<div class="prev"><span class="muted">Prüfe '+esc(file.name)+' …</span></div>');
@@ -407,6 +460,12 @@ main.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');if(!b
   const a=b.dataset.act;
   if(a==='planno'){upPlan=null;showPrev('');const f=document.getElementById('planfile');if(f)f.value='';return}
   if(a==='planok'&&upPlan){b.disabled=true;savePlanSwitch(async()=>{const r=await api('POST','/api/plans',{plan:upPlan});if(!r.ok){const d=await r.json().catch(()=>({}));alert(d.message||'Speichern fehlgeschlagen');throw new Error('x')}}).catch(()=>{b.disabled=false});return}
+  if(a==='pask'){planConfirm(b.dataset.k,b.dataset.v,1);return}
+  if(a==='pstep'){const el=document.querySelector('.pconf[data-for="'+b.dataset.v+'"]');
+    if(b.dataset.k==='restart'){const v=document.getElementById('pstart').value;if(!/^\d{4}-\d{2}-\d{2}$/.test(v))return;el.dataset.start=v}
+    planConfirm(b.dataset.k,b.dataset.v,2);if(b.dataset.k==='restart')el.dataset.start=el.dataset.start||'';return}
+  if(a==='pdo'){planDo(b.dataset.k,b.dataset.v,b);return}
+  if(a==='pcancel'){document.querySelectorAll('.pconf').forEach(x=>x.innerHTML='');return}
   if(a==='activate'){b.disabled=true;savePlanSwitch(()=>api('POST','/api/plans/'+b.dataset.v+'/activate',{})).catch(()=>{b.disabled=false});return}
   if(a==='logout'){api('POST','/api/logout',{}).finally(()=>{try{localStorage.removeItem(LKEY);localStorage.removeItem(SKEY)}catch(e){}location.href='/login'});return}
   if(a==='reha'||a==='rehano'){document.getElementById('rehabox').innerHTML=rehaBox(a==='reha');return}
@@ -420,14 +479,17 @@ main.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');if(!b
   else if(a==='form'){const v=+b.dataset.v;L.fb.form=L.fb.form===v?null:v;document.querySelectorAll('#form5 button').forEach(x=>x.classList.toggle('on',+x.dataset.v===L.fb.form));
     const fh=document.getElementById('formhint');fh.textContent=formHint(L.fb.form);fh.classList.toggle('low',!!L.fb.form&&L.fb.form<=2)}
   else if(a==='set'){const E=exLog(L,b.dataset.b),i=+b.dataset.i;const s=E.sets[i]=E.sets[i]||{};s.d=!s.d;
+    if(s.d&&!L.doneOn){L.doneOn=iso(new Date());const fi=document.getElementById('fb-date-'+id);if(fi)fi.value=L.doneOn}
     if(s.d){const row=b.closest('.sr');['kg','r'].forEach(k=>{if(!s[k]){const inp=row.querySelector('[data-k="'+k+'"]');const ph=inp.placeholder;if(ph&&/^[\d.,]+$/.test(ph)){s[k]=ph;inp.value=ph}}})}
     b.classList.toggle('on',s.d);b.closest('.sr').classList.toggle('done',s.d);
     if(s.d){const e=DAYS[S.d].ex.find(x=>x.b===b.dataset.b);let sec=pauseSec(e.pa);if(sec)startTimer(sec,e.b+' · '+e.n+' · Pause '+e.pa)}}
   touch(id)});
+main.addEventListener('change',ev=>{if(ev.target.dataset&&ev.target.dataset.done)ev.target.dispatchEvent(new Event('input',{bubbles:true}))});
 main.addEventListener('input',ev=>{const t=ev.target;const id=ID(S.w,S.d),L=getLog(id);
   if(t.dataset.k){const E=exLog(L,t.dataset.b),i=+t.dataset.i;const s=E.sets[i]=E.sets[i]||{};s[t.dataset.k]=t.value.trim()}
   else if(t.dataset.note){exLog(L,t.dataset.note).note=t.value}
-  else if(t.dataset.fb){L.fb[t.dataset.fb]=t.value}else return;
+  else if(t.dataset.fb){L.fb[t.dataset.fb]=t.value}
+  else if(t.dataset.done){if(/^\d{4}-\d{2}-\d{2}$/.test(t.value))L.doneOn=t.value;else delete L.doneOn}else return;
   touch(id)});
 
 /* ---------- rest timer ---------- */
@@ -463,7 +525,7 @@ async function init(){
     mode='offline'}
   DAYS=P.days;PHASE=P.weekLabels||[];NW=P.weeks;ND=DAYS.length;OFFS=DAYS.map(d=>d.offset);
   const sd=P.startDate.split('-');START=new Date(+sd[0],sd[1]-1,+sd[2]);
-  LKEY='slothly-logs-'+P.id;SKEY='slothly-skips-'+P.id;
+  LKEY='slothly-logs-'+P.id+'-'+(P.revision||0);SKEY='slothly-skips-'+P.id+'-'+(P.revision||0);
   try{logs=JSON.parse(localStorage.getItem(LKEY))||{}}catch(e){logs={}}
   try{const r=localStorage.getItem(SKEY);sched=r?JSON.parse(r):{reha:(P.skips&&P.skips.dates)||[],updatedAt:(P.skips&&P.skips.updatedAt)||0}}catch(e){}
   document.title=P.name+' · Slothly';

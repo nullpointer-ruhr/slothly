@@ -74,7 +74,7 @@ async function upsertExercise(c: Tx, e: PlanSlot): Promise<string> {
 export async function loadPlan(db: Db, userId: string, planId?: string) {
   const pr = await db.query(
     `SELECT id, name, subtitle, to_char(start_date, 'YYYY-MM-DD') AS start_date, weeks, week_labels, topset_week, intro, day_note, rules,
-            skip_dates, skips_updated_at
+            skip_dates, skips_updated_at, revision
        FROM plans WHERE user_id = $1 AND ${planId ? 'id = $2' : 'active'}`, planId ? [userId, planId] : [userId]);
   const p = pr.rows[0];
   if (!p) return null;
@@ -85,7 +85,7 @@ export async function loadPlan(db: Db, userId: string, planId?: string) {
     `SELECT s.*, e.name, e.muscle, e.video_query FROM plan_slots s JOIN exercises e ON e.id = s.exercise_id
       WHERE s.day_id = ANY($1) ORDER BY s.position`, [days.map(d => d.id)])).rows;
   return {
-    id: p.id, name: p.name, subtitle: p.subtitle, startDate: p.start_date, weeks: p.weeks, weekLabels: p.week_labels,
+    id: p.id, revision: p.revision, name: p.name, subtitle: p.subtitle, startDate: p.start_date, weeks: p.weeks, weekLabels: p.week_labels,
     topsetWeek: p.topset_week, intro: p.intro, dayNote: p.day_note, rules: p.rules, schemes,
     skips: { dates: p.skip_dates, updatedAt: Number(p.skips_updated_at) },
     days: days.map(d => ({
@@ -139,18 +139,20 @@ async function exportFor(db: Db, u: { id: string; email: string; name: string })
     const logs: Record<string, unknown> = {};
     for (const l of (await db.query('SELECT week, day_idx, data FROM workout_logs WHERE plan_id = $1 ORDER BY week, day_idx', [id])).rows)
       logs[`w${l.week}d${l.day_idx + 1}`] = l.data;
-    const { id: _id, skips, ...plan } = p;
+    const { id: _id, revision: _r, skips, ...plan } = p;
     plans.push({ plan: toV2({ format: 'slothly-plan/1', ...plan } as PlanFile), logs: { format: 'slothly-logs/1', logs, skips } });
   }
   return { format: 'slothly-export/1', exportedAt: new Date().toISOString(), user: { email: u.email, name: u.name }, plans };
 }
 
 export function planRoutes(app: FastifyInstance, db: Db, cfg: Config) {
-  async function ownPlan(userId: string, planId: string) {
+  async function ownPlan(userId: string, planId: string): Promise<{ revision: number; active: boolean; name: string }> {
     if (!/^[0-9a-f-]{36}$/.test(planId)) fail(404, 'Plan nicht gefunden');
-    const r = await db.query('SELECT 1 FROM plans WHERE id = $1 AND user_id = $2', [planId, userId]);
-    if (!r.rows[0]) fail(404, 'Plan nicht gefunden');
+    const r = await db.query('SELECT revision, active, name FROM plans WHERE id = $1 AND user_id = $2', [planId, userId]);
+    return r.rows[0] ?? fail(404, 'Plan nicht gefunden');
   }
+  /** Gerät schreibt mit einem Stand von vor dem Neustart: ablehnen, die Oberfläche lädt neu. */
+  const staleRev = (q: { rev?: string }, plan: { revision: number }) => q.rev !== undefined && Number(q.rev) !== plan.revision;
 
   app.get('/api/plan', async req => {
     const u = await requireUser(db, cfg, req);
@@ -163,15 +165,15 @@ export function planRoutes(app: FastifyInstance, db: Db, cfg: Config) {
     const logs: Record<string, unknown> = {};
     for (const l of (await db.query('SELECT week, day_idx, data FROM workout_logs WHERE plan_id = $1', [req.params.id])).rows)
       logs[`w${l.week}d${l.day_idx + 1}`] = l.data;
-    const s = (await db.query('SELECT skip_dates, skips_updated_at FROM plans WHERE id = $1', [req.params.id])).rows[0];
-    return { logs, skips: { dates: s.skip_dates, updatedAt: Number(s.skips_updated_at) } };
+    const s = (await db.query('SELECT skip_dates, skips_updated_at, revision FROM plans WHERE id = $1', [req.params.id])).rows[0];
+    return { revision: s.revision, logs, skips: { dates: s.skip_dates, updatedAt: Number(s.skips_updated_at) } };
   });
 
   // Speichern einer Einheit. Ist auf dem Server schon eine neuere Fassung (anderes Gerät),
   // kommt 409 mit dieser Fassung zurück, und die Oberfläche übernimmt sie.
-  app.put('/api/plans/:id/logs/:log', async (req: FastifyRequest<{ Params: { id: string; log: string }; Body: { updatedAt?: number } }>, reply) => {
+  app.put('/api/plans/:id/logs/:log', async (req: FastifyRequest<{ Params: { id: string; log: string }; Querystring: { rev?: string }; Body: { updatedAt?: number } }>, reply) => {
     const u = await requireUser(db, cfg, req);
-    await ownPlan(u.userId, req.params.id);
+    if (staleRev(req.query, await ownPlan(u.userId, req.params.id))) return reply.code(409).send({ reload: true });
     const m = LOG_ID.exec(req.params.log) ?? fail(400, 'Ungültige Einheit');
     const data = req.body;
     if (!data || typeof data !== 'object' || Array.isArray(data)) fail(400, 'Ungültige Daten');
@@ -182,9 +184,9 @@ export function planRoutes(app: FastifyInstance, db: Db, cfg: Config) {
     return reply.code(409).send({ data: cur.rows[0]?.data });
   });
 
-  app.put('/api/plans/:id/skips', async (req: FastifyRequest<{ Params: { id: string }; Body: { dates?: unknown; updatedAt?: number } }>, reply) => {
+  app.put('/api/plans/:id/skips', async (req: FastifyRequest<{ Params: { id: string }; Querystring: { rev?: string }; Body: { dates?: unknown; updatedAt?: number } }>, reply) => {
     const u = await requireUser(db, cfg, req);
-    await ownPlan(u.userId, req.params.id);
+    if (staleRev(req.query, await ownPlan(u.userId, req.params.id))) return reply.code(409).send({ reload: true });
     const dates = req.body?.dates;
     if (!Array.isArray(dates) || dates.length > 200 || !dates.every(d => typeof d === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(d))) fail(400, 'Ungültige Daten');
     if (await saveSkips(db, req.params.id, [...new Set(dates as string[])].sort(), Number(req.body?.updatedAt) || Date.now())) return { ok: true };
@@ -208,7 +210,7 @@ export function planRoutes(app: FastifyInstance, db: Db, cfg: Config) {
     const u = await requireUser(db, cfg, req);
     if (req.query.id) await ownPlan(u.userId, req.query.id);
     const p = (await loadPlan(db, u.userId, req.query.id)) ?? fail(404, 'Noch kein Plan hinterlegt.');
-    const { id: _id, skips: _s, ...plan } = p;
+    const { id: _id, revision: _r, skips: _s, ...plan } = p;
     return attach(reply, `slothly-${slug(p.name)}.json`, { _anleitung: template()._anleitung, ...toV2({ format: 'slothly-plan/1', ...plan } as PlanFile) });
   });
 
@@ -245,6 +247,37 @@ export function planRoutes(app: FastifyInstance, db: Db, cfg: Config) {
       await c.query('UPDATE plans SET active = false WHERE user_id = $1 AND active', [u.userId]);
       await c.query('UPDATE plans SET active = true WHERE id = $1', [req.params.id]);
     });
+    return { ok: true };
+  });
+
+  // Zyklus löschen: Plan samt allen Einträgen. War er aktiv, wird der zuletzt angelegte
+  // verbleibende Plan aktiv. Die Oberfläche fragt zweimal nach; der Server verlangt die Bestätigung im Body.
+  app.delete('/api/plans/:id', async (req: FastifyRequest<{ Params: { id: string }; Body: { confirm?: string } }>) => {
+    const u = await requireUser(db, cfg, req);
+    const plan = await ownPlan(u.userId, req.params.id);
+    if (req.body?.confirm !== 'loeschen') fail(400, 'Bestätigung fehlt.');
+    await tx(db, async c => {
+      await c.query('DELETE FROM plans WHERE id = $1', [req.params.id]);   // Schemata, Tage, Übungsplätze, Einträge per CASCADE
+      if (plan.active) await c.query(
+        `UPDATE plans SET active = true WHERE id = (SELECT id FROM plans WHERE user_id = $1 ORDER BY start_date DESC, created_at DESC LIMIT 1)`, [u.userId]);
+    });
+    req.log.info({ plan: req.params.id }, 'Zyklus gelöscht');
+    return { ok: true };
+  });
+
+  // Zyklus neu starten: alle Einträge und Ausfalltage weg, neues Startdatum, Plan bleibt.
+  app.post('/api/plans/:id/restart', async (req: FastifyRequest<{ Params: { id: string }; Body: { confirm?: string; start?: string } }>) => {
+    const u = await requireUser(db, cfg, req);
+    await ownPlan(u.userId, req.params.id);
+    if (req.body?.confirm !== 'neustart') fail(400, 'Bestätigung fehlt.');
+    const start = String(req.body?.start ?? '');
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || isNaN(Date.parse(start))) fail(400, 'Bitte ein gültiges Startdatum wählen.');
+    await tx(db, async c => {
+      await c.query('DELETE FROM workout_logs WHERE plan_id = $1', [req.params.id]);
+      await c.query(`UPDATE plans SET start_date = $2, skip_dates = '[]', skips_updated_at = $3, revision = revision + 1 WHERE id = $1`,
+        [req.params.id, start, Date.now()]);
+    });
+    req.log.info({ plan: req.params.id, start }, 'Zyklus neu gestartet');
     return { ok: true };
   });
 
