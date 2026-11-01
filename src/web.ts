@@ -27,9 +27,22 @@ export function cspFor(html: string): string {
   ].join('; ');
 }
 
-function load(dir: string, file: string): Page {
-  const html = readFileSync(path.join(dir, file), 'utf8');
+function load(dir: string, file: string, iconV: string): Page {
+  const html = readFileSync(path.join(dir, file), 'utf8').replaceAll('__ICONV__', iconV);
   return { html, csp: cspFor(html) };
+}
+
+/**
+ * Kennung aus dem Inhalt der Icons: Ändert sich ein Icon, ändern sich die Adressen (…?v=…),
+ * und Safari, iOS und Browser holen es neu statt die alte Datei aus dem Cache zu nehmen.
+ */
+function iconVersion(dir: string): string {
+  const h = createHash('sha256');
+  for (const f of ['favicon.ico', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png']) {
+    const p = path.join(dir, f);
+    if (existsSync(p)) h.update(readFileSync(p));
+  }
+  return h.digest('hex').slice(0, 10);
 }
 
 // Feste Liste, kein Pfad aus der Anfrage.
@@ -47,7 +60,10 @@ const STATIC: Record<string, string> = {
 };
 
 export function webRoutes(app: FastifyInstance, db: Db, cfg: Config) {
-  const pages = { app: load(cfg.webDir, 'app.html'), login: load(cfg.webDir, 'login.html') };
+  const iconV = iconVersion(cfg.webDir);
+  const pages = { app: load(cfg.webDir, 'app.html', iconV), login: load(cfg.webDir, 'login.html', iconV) };
+  const manifest = existsSync(path.join(cfg.webDir, 'manifest.webmanifest'))
+    ? readFileSync(path.join(cfg.webDir, 'manifest.webmanifest'), 'utf8').replaceAll('__ICONV__', iconV) : null;
 
   app.addHook('onSend', async (_req, reply, payload) => {
     reply.header('X-Content-Type-Options', 'nosniff');
@@ -70,11 +86,16 @@ export function webRoutes(app: FastifyInstance, db: Db, cfg: Config) {
     if (!p || !existsSync(p)) return reply.code(404).send();
     return reply.type('font/woff2').header('Cache-Control', 'public, max-age=31536000, immutable').send(readFileSync(p));
   });
+  app.get('/manifest.webmanifest', async (_req, reply) =>
+    manifest ? reply.type('application/manifest+json').header('Cache-Control', 'no-cache').send(manifest) : reply.code(404).send());
   for (const [url, type] of Object.entries(STATIC)) {
-    app.get(url, async (_req, reply) => {
+    if (url === '/manifest.webmanifest') continue;
+    app.get(url, async (req, reply) => {
       const p = path.join(cfg.webDir, url.slice(1));
       if (!existsSync(p)) return reply.code(404).send();
-      return reply.type(type).header('Cache-Control', 'public, max-age=86400').send(readFileSync(p));
+      // Mit passender Versionskennung lange cachen; ohne (alte Links, /favicon.ico vom Browser) nur kurz.
+      const versioned = (req.query as { v?: string }).v === iconV;
+      return reply.type(type).header('Cache-Control', versioned ? 'public, max-age=31536000, immutable' : 'public, max-age=300').send(readFileSync(p));
     });
   }
 }
