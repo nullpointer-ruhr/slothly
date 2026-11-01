@@ -17,7 +17,7 @@ export class HttpError extends Error {
 }
 export const fail = (status: number, message: string): never => { throw new HttpError(status, message); };
 
-export interface SessionUser { userId: string; email: string; name: string }
+export interface SessionUser { userId: string; email: string; name: string; role: 'user' | 'admin' }
 
 export const cookieName = (cfg: Config) => (cfg.secureCookies ? '__Host-slothly' : 'slothly_session');
 
@@ -29,27 +29,30 @@ export const REQUESTS_PER_HOUR = 5;    // angeforderte Codes pro Konto und Stund
  * Gültig ist immer nur der zuletzt angeforderte Code. Ohne `force` höchstens
  * REQUESTS_PER_HOUR pro Stunde (dann 'limit'), damit sich Codes nicht durchprobieren lassen.
  */
-export async function createLoginLink(c: Db | Tx, cfg: Pick<Config, 'publicOrigin' | 'loginLinkMinutes'>, email: string, force = false) {
+export async function createLoginLink(c: Db | Tx, cfg: Pick<Config, 'publicOrigin' | 'loginLinkMinutes'>, email: string, force = false):
+  Promise<null | { limit: true; retryMin: number } | { limit?: false; link: string; code: string; name: string; tokenHash: Buffer }> {
   const u = await c.query<{ id: string; name: string }>('SELECT id, name FROM users WHERE email = $1 AND disabled_at IS NULL', [normEmail(email)]);
   if (!u.rows[0]) return null;
   const userId = u.rows[0].id;
   await c.query(`DELETE FROM login_tokens WHERE user_id = $1 AND created_at < now() - interval '1 day'`, [userId]);
   if (!force) {
-    const n = await c.query<{ n: number }>(`SELECT count(*)::int AS n FROM login_tokens WHERE user_id = $1 AND created_at > now() - interval '1 hour'`, [userId]);
-    if (n.rows[0].n >= REQUESTS_PER_HOUR) return 'limit' as const;
+    const n = await c.query<{ n: number; wait: number }>(
+      `SELECT count(*)::int AS n, ceil(extract(epoch FROM (min(created_at) + interval '1 hour' - now())) / 60)::int AS wait
+         FROM login_tokens WHERE user_id = $1 AND created_at > now() - interval '1 hour'`, [userId]);
+    if (n.rows[0].n >= REQUESTS_PER_HOUR) return { limit: true, retryMin: Math.max(1, n.rows[0].wait) };
   }
   const t = token();
   const code = String(randomInt(0, 1_000_000)).padStart(6, '0');
-  await c.query(`INSERT INTO login_tokens (token_hash, user_id, expires_at, code_hash) VALUES ($1, $2, now() + make_interval(mins => $3), $4)`,
-    [sha256(t), userId, cfg.loginLinkMinutes, sha256(code)]);
-  return { link: `${cfg.publicOrigin}/anmelden#${t}`, code, name: u.rows[0].name };
+  await c.query(`INSERT INTO login_tokens (token_hash, user_id, expires_at, code_hash, mail_status) VALUES ($1, $2, now() + make_interval(mins => $3), $4, $5)`,
+    [sha256(t), userId, cfg.loginLinkMinutes, sha256(code), force ? 'admin' : null]);
+  return { link: `${cfg.publicOrigin}/anmelden#${t}`, code, name: u.rows[0].name, tokenHash: sha256(t) };
 }
 
 export async function readSession(db: Db, cfg: Config, req: FastifyRequest): Promise<SessionUser | null> {
   const t = req.cookies[cookieName(cfg)];
   if (!t) return null;
-  const r = await db.query<{ user_id: string; email: string; name: string; stale: boolean }>(
-    `SELECT s.user_id, u.email, u.name, s.last_seen_at < now() - interval '1 hour' AS stale
+  const r = await db.query<{ user_id: string; email: string; name: string; role: 'user' | 'admin'; stale: boolean }>(
+    `SELECT s.user_id, u.email, u.name, u.role, s.last_seen_at < now() - interval '1 hour' AS stale
        FROM sessions s JOIN users u ON u.id = s.user_id
       WHERE s.id_hash = $1 AND s.expires_at > now() AND u.disabled_at IS NULL`, [sha256(t)]);
   const row = r.rows[0];
@@ -57,7 +60,7 @@ export async function readSession(db: Db, cfg: Config, req: FastifyRequest): Pro
   if (row.stale) {   // rollierend verlängern, höchstens einmal pro Stunde ein Schreibzugriff
     await db.query(`UPDATE sessions SET last_seen_at = now(), expires_at = now() + make_interval(days => $2) WHERE id_hash = $1`, [sha256(t), cfg.sessionDays]);
   }
-  return { userId: row.user_id, email: row.email, name: row.name };
+  return { userId: row.user_id, email: row.email, name: row.name, role: row.role };
 }
 
 export async function requireUser(db: Db, cfg: Config, req: FastifyRequest): Promise<SessionUser> {
@@ -82,9 +85,17 @@ export function authRoutes(app: FastifyInstance, db: Db, cfg: Config, mailer: Ma
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) fail(400, 'Bitte eine gültige E-Mail-Adresse eingeben.');
     if (!mailer) fail(503, 'Mailversand ist nicht eingerichtet. Bitte den Link beim Betreiber anfordern.');
     const l = await createLoginLink(db, cfg, email);
-    if (l && l !== 'limit') {
-      try { await mailer!.send(loginMail(email, l.name, l.link, l.code, cfg.loginLinkMinutes)); }
-      catch (e) { req.log.error({ err: e }, 'Mailversand fehlgeschlagen'); fail(502, 'Mail konnte nicht verschickt werden. Bitte später erneut versuchen.'); }
+    // Stundenlimit sichtbar machen statt still nichts zu schicken (verrät nur, dass es die Adresse gibt,
+    // und das erst nach 5 Anfragen in einer Stunde).
+    if (l?.limit) fail(429, `Zu viele Codes angefordert. Bitte in ${l.retryMin} Minute${l.retryMin === 1 ? '' : 'n'} erneut versuchen.`);
+    if (l && !l.limit) {
+      try {
+        await mailer!.send(loginMail(email, l.name, l.link, l.code, cfg.loginLinkMinutes));
+        await db.query(`UPDATE login_tokens SET mail_status = 'gesendet' WHERE token_hash = $1`, [l.tokenHash]);
+      } catch (e) {
+        await db.query(`UPDATE login_tokens SET mail_status = 'fehler' WHERE token_hash = $1`, [l.tokenHash]).catch(() => {});
+        req.log.error({ err: e }, 'Mailversand fehlgeschlagen'); fail(502, 'Mail konnte nicht verschickt werden. Bitte später erneut versuchen.');
+      }
     }
     return { ok: true };
   });
@@ -144,6 +155,6 @@ export function authRoutes(app: FastifyInstance, db: Db, cfg: Config, mailer: Ma
 
   app.get('/api/me', async req => {
     const u = await requireUser(db, cfg, req);
-    return { email: u.email, name: u.name };
+    return { email: u.email, name: u.name, role: u.role };
   });
 }

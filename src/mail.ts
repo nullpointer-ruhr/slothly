@@ -45,3 +45,20 @@ export function loginMail(to: string, name: string, link: string, code: string, 
 </div></body></html>`,
   };
 }
+
+export function inviteMail(to: string, name: string, origin: string): Mail {
+  const p = [
+    `Hallo ${name},`,
+    'für dich wurde ein Konto bei Slothly angelegt, der Trainings-App für Plan, Sätze und Pausen.',
+    `Öffne ${origin} (am iPhone in Safari, dann Teilen → „Zum Home-Bildschirm“), gib diese Adresse ein und tippe auf „Code schicken“. Den Code aus der nächsten Mail tippst du in der App ein.`,
+  ];
+  return {
+    to, subject: 'Dein Konto bei Slothly',
+    text: `${p.join('\n\n')}\n\n${origin}\n`,
+    html: `<!doctype html><html lang="de"><body style="margin:0;background:#eef0f4;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;color:#15181e">
+<div style="max-width:480px;margin:32px auto;background:#fff;border:1px solid #dce0e8;border-radius:12px;padding:28px">
+${p.map(x => `<p style="font-size:15px;line-height:1.5;margin:0 0 14px">${esc(x)}</p>`).join('\n')}
+<p style="margin:22px 0"><a href="${esc(origin)}" style="display:inline-block;background:#185953;color:#fff;text-decoration:none;padding:12px 20px;border-radius:9px;font-weight:600">Slothly öffnen</a></p>
+</div></body></html>`,
+  };
+}

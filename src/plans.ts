@@ -6,6 +6,7 @@ import type { Config } from './config.ts';
 import { tx, type Db, type Tx } from './db.ts';
 import { fail, normEmail, requireUser } from './auth.ts';
 import { checkPlan, parsePlanFile, summarize, toV2, type PlanFile, type PlanSlot } from './planfile.ts';
+import { deriveCapture, parsePause, parseSkillText } from './derive.ts';
 
 export type { PlanFile } from './planfile.ts';
 
@@ -38,26 +39,33 @@ export async function importPlanFor(db: Db, userId: string, p: PlanFile, activat
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
       [userId, p.name, p.subtitle ?? null, p.startDate, p.weeks, JSON.stringify(p.weekLabels ?? []), p.topsetWeek ?? null,
        p.intro ?? null, p.dayNote ?? null, JSON.stringify(p.rules ?? []), activate]);
-    const planId = pr.rows[0].id;
-    for (const [code, weeks] of Object.entries(p.schemes))
-      await c.query('INSERT INTO schemes (plan_id, code, weeks) VALUES ($1, $2, $3)', [planId, code, JSON.stringify(weeks)]);
-    for (const [di, d] of p.days.entries()) {
-      const dr = await c.query<{ id: string }>(
-        `INSERT INTO plan_days (plan_id, idx, title, weekday_offset, warmup, skill, cooldown, notes, group_labels)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
-        [planId, di, d.title, d.offset, JSON.stringify(d.warm ?? []), d.skill ?? null, d.cool ?? null,
-         JSON.stringify(d.notes ?? []), JSON.stringify(d.groups ?? {})]);
-      for (const [pos, e] of d.ex.entries()) {
-        const exId = await upsertExercise(c, e);
-        await c.query(
-          `INSERT INTO plan_slots (day_id, position, label, exercise_id, cadence, info, start_weight, pause, scheme_code, format, reps, side, warmup_sets, topset, cap_label)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`,
-          [dr.rows[0].id, pos, e.b, exId, e.k ?? null, e.i ?? null, e.st ?? null, e.pa ?? null, e.scheme, e.format,
-           e.r ?? null, e.side ?? null, !!e.wu, !!e.top, e.cap ?? null]);
-      }
-    }
-    return planId;
+    await writePlanContent(c, pr.rows[0].id, p);
+    return pr.rows[0].id;
   });
+}
+
+/** Schemata, Tage und Übungsplätze eines Plans schreiben (beim Anlegen und beim Ersetzen). */
+async function writePlanContent(c: Tx, planId: string, p: PlanFile) {
+  for (const [code, weeks] of Object.entries(p.schemes))
+    await c.query('INSERT INTO schemes (plan_id, code, weeks) VALUES ($1, $2, $3)', [planId, code, JSON.stringify(weeks)]);
+  for (const [di, d] of p.days.entries()) {
+    const dr = await c.query<{ id: string }>(
+      `INSERT INTO plan_days (plan_id, idx, title, weekday_offset, warmup, skill, skill_block, cooldown, notes, group_labels)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+      [planId, di, d.title, d.offset, JSON.stringify(d.warm ?? []), d.skill ?? null, d.skillBlock ? JSON.stringify(d.skillBlock) : null,
+       d.cool ?? null, JSON.stringify(d.notes ?? []), JSON.stringify(d.groups ?? {})]);
+    for (const [pos, e] of d.ex.entries()) {
+      const exId = await upsertExercise(c, e);
+      await c.query(
+        `INSERT INTO plan_slots (day_id, position, label, exercise_id, cadence, info, start_weight, pause, scheme_code, format, reps, side,
+                                 warmup_sets, topset, cap_label, fields, time_mode, weight_ref, pause_s, tabata)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)`,
+        [dr.rows[0].id, pos, e.b, exId, e.k ?? null, e.i ?? null, e.st ?? null, e.pa ?? null, e.scheme, e.format,
+         e.r ?? null, e.side ?? null, !!e.wu, !!e.top, e.cap ?? null,
+         e.fields?.length ? JSON.stringify(e.fields) : null, e.tmode ?? null, e.wref ?? null, e.ps ?? null,
+         e.tabata ? JSON.stringify(e.tabata) : null]);
+    }
+  }
 }
 
 async function upsertExercise(c: Tx, e: PlanSlot): Promise<string> {
@@ -74,7 +82,7 @@ async function upsertExercise(c: Tx, e: PlanSlot): Promise<string> {
 export async function loadPlan(db: Db, userId: string, planId?: string) {
   const pr = await db.query(
     `SELECT id, name, subtitle, to_char(start_date, 'YYYY-MM-DD') AS start_date, weeks, week_labels, topset_week, intro, day_note, rules,
-            skip_dates, skips_updated_at, revision
+            skip_dates, skips_updated_at, revision, moves, moves_updated_at
        FROM plans WHERE user_id = $1 AND ${planId ? 'id = $2' : 'active'}`, planId ? [userId, planId] : [userId]);
   const p = pr.rows[0];
   if (!p) return null;
@@ -88,12 +96,21 @@ export async function loadPlan(db: Db, userId: string, planId?: string) {
     id: p.id, revision: p.revision, name: p.name, subtitle: p.subtitle, startDate: p.start_date, weeks: p.weeks, weekLabels: p.week_labels,
     topsetWeek: p.topset_week, intro: p.intro, dayNote: p.day_note, rules: p.rules, schemes,
     skips: { dates: p.skip_dates, updatedAt: Number(p.skips_updated_at) },
+    moves: { map: p.moves, updatedAt: Number(p.moves_updated_at) },
     days: days.map(d => ({
       title: d.title, offset: d.weekday_offset, warm: d.warmup, skill: d.skill, cool: d.cooldown, notes: d.notes, groups: d.group_labels,
-      ex: slots.filter(s => s.day_id === d.id).map(s => ({
-        b: s.label, n: s.name, m: s.muscle, q: s.video_query, k: s.cadence, i: s.info, st: s.start_weight, pa: s.pause,
-        scheme: s.scheme_code, format: s.format, r: s.reps, side: s.side, wu: s.warmup_sets, top: s.topset, cap: s.cap_label,
-      })),
+      // #5: strukturiert, sonst aus dem alten Text abgeleitet
+      skillBlock: d.skill_block ?? parseSkillText(d.skill, p.weeks),
+      ex: slots.filter(s => s.day_id === d.id).map(s => {
+        const base = {
+          b: s.label, n: s.name, m: s.muscle, q: s.video_query, k: s.cadence, i: s.info, st: s.start_weight, pa: s.pause,
+          scheme: s.scheme_code, format: s.format, r: s.reps, side: s.side, wu: s.warmup_sets, top: s.topset, cap: s.cap_label,
+          tabata: s.tabata,
+        };
+        // #10/#7: explizite Angaben oder aus den Texten abgeleitet, die Oberfläche braucht nichts mehr zu raten
+        const c = deriveCapture({ ...base, fields: s.fields, tmode: s.time_mode, wref: s.weight_ref });
+        return { ...base, fields: c.fields, tmode: c.tmode, wref: c.wref, ps: s.pause_s ?? parsePause(s.pause) };
+      }),
     })),
   };
 }
@@ -101,7 +118,7 @@ export async function loadPlan(db: Db, userId: string, planId?: string) {
 const LOG_ID = /^w(\d{1,2})d(\d)$/;   // w3d2 = Woche 3, Tag 2 (wie im Artifact)
 
 /** Logs im Format der Oberfläche übernehmen (z. B. Export aus dem Artifact). Neuere gewinnen. */
-export async function importLogs(db: Db, planId: string, file: { logs?: Record<string, { updatedAt?: number }>; skips?: { dates: string[]; updatedAt: number } }) {
+export async function importLogs(db: Db, planId: string, file: { logs?: Record<string, Record<string, unknown>>; skips?: { dates: string[]; updatedAt: number } }) {
   let n = 0;
   for (const [id, data] of Object.entries(file.logs ?? {})) {
     const m = LOG_ID.exec(id); if (!m) continue;
@@ -111,13 +128,61 @@ export async function importLogs(db: Db, planId: string, file: { logs?: Record<s
   return n;
 }
 
-async function saveLog(db: Db | Tx, planId: string, week: number, dayIdx: number, data: unknown, updatedAt: number): Promise<boolean> {
+const STATUS = new Set(['offen', 'laeuft', 'fertig', 'abgebrochen']);
+const ms = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) && v > 1e12 && v < 4e12 ? v : null);
+
+/**
+ * #12: Status und Zeiten aus dem Dokument der Oberfläche in eigene Spalten übernehmen.
+ * Alte Dokumente ohne status: mit Trainingsdatum = fertig, sonst offen.
+ */
+export function logColumns(data: Record<string, unknown>) {
+  const doneOn = typeof data.doneOn === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(data.doneOn) ? data.doneOn : null;
+  const status = STATUS.has(String(data.status)) ? String(data.status) : doneOn ? 'fertig' : 'offen';
+  const started = ms(data.startedAt), finished = status === 'fertig' || status === 'abgebrochen' ? ms(data.finishedAt) : null;
+  let dur = typeof data.durS === 'number' && Number.isFinite(data.durS) && data.durS >= 0 && data.durS < 86400 ? Math.round(data.durS) : null;
+  if (dur === null && started && finished && finished >= started) dur = Math.round((finished - started) / 1000);
+  return { status, started, finished, dur, doneOn };
+}
+
+async function saveLog(db: Db | Tx, planId: string, week: number, dayIdx: number, data: Record<string, unknown>, updatedAt: number): Promise<boolean> {
+  const c = logColumns(data);
   const r = await db.query(
-    `INSERT INTO workout_logs (plan_id, week, day_idx, data, updated_at) VALUES ($1, $2, $3, $4, $5)
-     ON CONFLICT (plan_id, week, day_idx) DO UPDATE SET data = EXCLUDED.data, updated_at = EXCLUDED.updated_at, saved_at = now()
+    `INSERT INTO workout_logs (plan_id, week, day_idx, data, updated_at, status, started_at, finished_at, duration_s, done_on)
+     VALUES ($1, $2, $3, $4, $5, $6, to_timestamp($7::bigint / 1000.0), to_timestamp($8::bigint / 1000.0), $9, $10)
+     ON CONFLICT (plan_id, week, day_idx) DO UPDATE SET data = EXCLUDED.data, updated_at = EXCLUDED.updated_at, saved_at = now(),
+       status = EXCLUDED.status, started_at = EXCLUDED.started_at, finished_at = EXCLUDED.finished_at,
+       duration_s = EXCLUDED.duration_s, done_on = EXCLUDED.done_on
        WHERE workout_logs.updated_at <= EXCLUDED.updated_at`,
-    [planId, week, dayIdx, JSON.stringify(data), updatedAt]);
+    [planId, week, dayIdx, JSON.stringify(data), updatedAt, c.status, c.started, c.finished, c.dur, c.doneOn]);
   return (r.rowCount ?? 0) > 0;
+}
+
+async function saveMoves(db: Db | Tx, planId: string, map: Record<string, string>, updatedAt: number): Promise<boolean> {
+  const r = await db.query(`UPDATE plans SET moves = $2, moves_updated_at = $3 WHERE id = $1 AND moves_updated_at <= $3`,
+    [planId, JSON.stringify(map), updatedAt]);
+  return (r.rowCount ?? 0) > 0;
+}
+
+/**
+ * #2: Prüft, ob ein neuer Plan einen bestehenden ersetzen kann, ohne Einträge zu verlieren.
+ * Einträge hängen an Woche × Tag × Block-Label; fallen Wochen, Tage oder Labels mit Einträgen weg, wird gewarnt.
+ */
+export async function replaceCheck(db: Db | Tx, planId: string, p: PlanFile) {
+  const logs = (await db.query<{ week: number; day_idx: number; data: { ex?: Record<string, { sets?: unknown[]; note?: string }> } }>(
+    'SELECT week, day_idx, data FROM workout_logs WHERE plan_id = $1', [planId])).rows;
+  const errors: string[] = [], orphans: string[] = [];
+  const maxWeek = Math.max(0, ...logs.map(l => l.week)), maxDay = Math.max(-1, ...logs.map(l => l.day_idx));
+  if (maxWeek > p.weeks) errors.push(`Es gibt Einträge bis Woche ${maxWeek}, der neue Plan hat nur ${p.weeks} Wochen.`);
+  if (maxDay + 1 > p.days.length) errors.push(`Es gibt Einträge an Tag ${maxDay + 1}, der neue Plan hat nur ${p.days.length} Tage pro Woche.`);
+  const filled = (e: { sets?: unknown[]; note?: string }) => !!e.note || (e.sets ?? []).some(x => x && typeof x === 'object' && Object.values(x as object).some(v => v !== '' && v !== false && v != null));
+  for (const l of logs) {
+    const day = p.days[l.day_idx];
+    for (const [label, e] of Object.entries(l.data.ex ?? {})) {
+      if (!filled(e)) continue;
+      if (!day || !day.ex.some(x => x.b === label)) orphans.push(`W${l.week} Tag ${l.day_idx + 1}: ${label}`);
+    }
+  }
+  return { possible: errors.length === 0, errors, orphans, sessions: logs.length };
 }
 
 async function saveSkips(db: Db | Tx, planId: string, dates: string[], updatedAt: number): Promise<boolean> {
@@ -165,8 +230,9 @@ export function planRoutes(app: FastifyInstance, db: Db, cfg: Config) {
     const logs: Record<string, unknown> = {};
     for (const l of (await db.query('SELECT week, day_idx, data FROM workout_logs WHERE plan_id = $1', [req.params.id])).rows)
       logs[`w${l.week}d${l.day_idx + 1}`] = l.data;
-    const s = (await db.query('SELECT skip_dates, skips_updated_at, revision FROM plans WHERE id = $1', [req.params.id])).rows[0];
-    return { revision: s.revision, logs, skips: { dates: s.skip_dates, updatedAt: Number(s.skips_updated_at) } };
+    const s = (await db.query('SELECT skip_dates, skips_updated_at, revision, moves, moves_updated_at FROM plans WHERE id = $1', [req.params.id])).rows[0];
+    return { revision: s.revision, logs, skips: { dates: s.skip_dates, updatedAt: Number(s.skips_updated_at) },
+             moves: { map: s.moves, updatedAt: Number(s.moves_updated_at) } };
   });
 
   // Speichern einer Einheit. Ist auf dem Server schon eine neuere Fassung (anderes Gerät),
@@ -175,7 +241,7 @@ export function planRoutes(app: FastifyInstance, db: Db, cfg: Config) {
     const u = await requireUser(db, cfg, req);
     if (staleRev(req.query, await ownPlan(u.userId, req.params.id))) return reply.code(409).send({ reload: true });
     const m = LOG_ID.exec(req.params.log) ?? fail(400, 'Ungültige Einheit');
-    const data = req.body;
+    const data = req.body as Record<string, unknown>;
     if (!data || typeof data !== 'object' || Array.isArray(data)) fail(400, 'Ungültige Daten');
     const updatedAt = Number(data.updatedAt);
     if (!Number.isFinite(updatedAt) || updatedAt <= 0) fail(400, 'updatedAt fehlt');
@@ -192,6 +258,19 @@ export function planRoutes(app: FastifyInstance, db: Db, cfg: Config) {
     if (await saveSkips(db, req.params.id, [...new Set(dates as string[])].sort(), Number(req.body?.updatedAt) || Date.now())) return { ok: true };
     const s = (await db.query('SELECT skip_dates, skips_updated_at FROM plans WHERE id = $1', [req.params.id])).rows[0];
     return reply.code(409).send({ dates: s.skip_dates, updatedAt: Number(s.skips_updated_at) });
+  });
+
+  // #6: Einheit auf einen bestimmten Tag legen, nur diese Einheit ({"w1d3": "2026-10-31"}).
+  app.put('/api/plans/:id/moves', async (req: FastifyRequest<{ Params: { id: string }; Querystring: { rev?: string }; Body: { map?: unknown; updatedAt?: number } }>, reply) => {
+    const u = await requireUser(db, cfg, req);
+    if (staleRev(req.query, await ownPlan(u.userId, req.params.id))) return reply.code(409).send({ reload: true });
+    const map = req.body?.map;
+    if (!map || typeof map !== 'object' || Array.isArray(map)) fail(400, 'Ungültige Daten');
+    const entries = Object.entries(map as Record<string, unknown>);
+    if (entries.length > 200 || !entries.every(([k, v]) => LOG_ID.test(k) && typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v))) fail(400, 'Ungültige Daten');
+    if (await saveMoves(db, req.params.id, map as Record<string, string>, Number(req.body?.updatedAt) || Date.now())) return { ok: true };
+    const s = (await db.query('SELECT moves, moves_updated_at FROM plans WHERE id = $1', [req.params.id])).rows[0];
+    return reply.code(409).send({ map: s.moves, updatedAt: Number(s.moves_updated_at) });
   });
 
   // ---------- Pläne selbst verwalten: Vorlage, Download, Prüfen, Hochladen, Wechseln ----------
@@ -215,10 +294,45 @@ export function planRoutes(app: FastifyInstance, db: Db, cfg: Config) {
   });
 
   // Prüfen ohne zu speichern: Vorschau und alle Fehler auf einmal.
-  app.post('/api/plans/check', async (req: FastifyRequest<{ Body: { plan?: unknown } }>) => {
-    await requireUser(db, cfg, req);
+  app.post('/api/plans/check', async (req: FastifyRequest<{ Body: { plan?: unknown; replaceId?: string } }>) => {
+    const u = await requireUser(db, cfg, req);
     const r = parsePlanFile(req.body?.plan);
-    return { ok: !!r.plan, errors: r.errors, warnings: r.warnings, summary: r.plan ? summarize(r.plan) : null };
+    let replace = null;
+    if (r.plan && req.body?.replaceId) { await ownPlan(u.userId, req.body.replaceId); replace = await replaceCheck(db, req.body.replaceId, r.plan); }
+    return { ok: !!r.plan, errors: r.errors, warnings: r.warnings, summary: r.plan ? summarize(r.plan) : null, replace };
+  });
+
+  // #2: Plan ersetzen, Einträge behalten. Wochen und Tage mit Einträgen müssen bleiben;
+  // fallen Blöcke mit Einträgen weg, ist eine ausdrückliche Bestätigung nötig (force).
+  app.put('/api/plans/:id', async (req: FastifyRequest<{ Params: { id: string }; Body: { plan?: unknown; force?: boolean } }>, reply) => {
+    const u = await requireUser(db, cfg, req);
+    await ownPlan(u.userId, req.params.id);
+    const r = parsePlanFile(req.body?.plan);
+    if (!r.plan) fail(400, 'Plan ungültig: ' + r.errors.join('; '));
+    const p = r.plan!;
+    await tx(db, async c => {
+      await c.query('SELECT 1 FROM plans WHERE id = $1 FOR UPDATE', [req.params.id]);
+      const chk = await replaceCheck(c, req.params.id, p);
+      if (!chk.possible) fail(400, chk.errors.join(' '));
+      if (chk.orphans.length && req.body?.force !== true) {
+        reply.code(409);
+        throw Object.assign(new Error('orphans'), { orphans: chk.orphans });
+      }
+      await c.query('DELETE FROM schemes WHERE plan_id = $1', [req.params.id]);
+      await c.query('DELETE FROM plan_days WHERE plan_id = $1', [req.params.id]);   // Übungsplätze per CASCADE
+      await c.query(
+        `UPDATE plans SET name = $2, subtitle = $3, start_date = $4, weeks = $5, week_labels = $6, topset_week = $7, intro = $8, day_note = $9, rules = $10
+          WHERE id = $1`,
+        [req.params.id, p.name, p.subtitle ?? null, p.startDate, p.weeks, JSON.stringify(p.weekLabels ?? []), p.topsetWeek ?? null,
+         p.intro ?? null, p.dayNote ?? null, JSON.stringify(p.rules ?? [])]);
+      await writePlanContent(c, req.params.id, p);
+    }).catch((e: Error & { orphans?: string[] }) => {
+      if (e.orphans) return reply.code(409).send({ message: 'Blöcke mit Einträgen fehlen im neuen Plan.', orphans: e.orphans });
+      throw e;
+    });
+    if (reply.sent) return reply;
+    req.log.info({ plan: req.params.id }, 'Plan ersetzt');
+    return { ok: true };
   });
 
   // Übernehmen: neuer Plan wird aktiv, der bisherige bleibt mit allen Einträgen erhalten.
@@ -274,7 +388,7 @@ export function planRoutes(app: FastifyInstance, db: Db, cfg: Config) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(start) || isNaN(Date.parse(start))) fail(400, 'Bitte ein gültiges Startdatum wählen.');
     await tx(db, async c => {
       await c.query('DELETE FROM workout_logs WHERE plan_id = $1', [req.params.id]);
-      await c.query(`UPDATE plans SET start_date = $2, skip_dates = '[]', skips_updated_at = $3, revision = revision + 1 WHERE id = $1`,
+      await c.query(`UPDATE plans SET start_date = $2, skip_dates = '[]', skips_updated_at = $3, moves = '{}', moves_updated_at = $3, revision = revision + 1 WHERE id = $1`,
         [req.params.id, start, Date.now()]);
     });
     req.log.info({ plan: req.params.id, start }, 'Zyklus neu gestartet');
