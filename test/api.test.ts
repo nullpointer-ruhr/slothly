@@ -118,7 +118,7 @@ test('fremde Pläne sind nicht erreichbar', async () => {
 
 test('beide Pläne teilen sich die Übungsbibliothek', async () => {
   const r = await db.query(`SELECT count(*)::int AS n FROM exercises`);
-  assert.equal(r.rows[0].n, 8);
+  assert.equal(r.rows[0].n, 9);
 });
 
 test('ungültige Pläne werden vor dem Schreiben abgelehnt', () => {

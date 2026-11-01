@@ -5,10 +5,12 @@
     "2. In Slothly unter Regeln > Pläne > 'Plan hochladen' die fertige Datei wählen. Die App prüft sie und zeigt eine Vorschau; erst 'Übernehmen' speichert. Der bisherige Plan bleibt mit allen Einträgen erhalten.",
     "FELDER (oben): name, untertitel; start = Montag der ersten Woche (JJJJ-MM-TT); wochen = Anzahl Wochen; wochenNamen = Bezeichnung je Woche (z. B. Einstieg, Deload); topsatzWoche = Woche mit Topsatz-Test oder null; einleitung und tagesHinweis = freie Texte.",
     "schemata: benannte Wochenschemata (Name nur Großbuchstaben/Ziffern/_). Je Woche ein Eintrag {saetze, rpe}; Anzahl Einträge = wochen. Mehrere Übungen können dasselbe Schema nutzen (z. B. HAUPT, NEBEN, REHA). Bei Zirkeln und Pausenfüllern rpe weglassen.",
+    "tage: ein Eintrag pro Trainingstag in Wochenreihenfolge. wochentag = Mo, Di, Mi, Do, Fr, Sa oder So. aufwaermen = Abhakliste, cooldown = Text oder null, hinweise = Liste, bloecke = Überschrift je Buchstabe (A, B, C ...). Reihenfolge in der App: Aufwärmen, Skill, Blöcke, Cool-down.",
+    "skill (optional, pro Tag): Skill-Block nach dem Aufwärmen, z. B. Handstand. {titel, dauer, hinweis, wochen: [[{name, vorgabe, video}, ...], ...]} mit einer Liste pro Woche (Anzahl = wochen), oder {titel, uebungen: [...]} wenn jede Woche gleich ist. Die App zeigt nur die aktuelle Woche, jedes Element zum Abhaken.",
+    "uebungen: block (A, A+, B1, B2 ...; Supersätze und Zirkel teilen den Buchstaben und werden in der App rundenweise angezeigt), name, muskel, video (Suchbegriff, englisch findet mehr), kadenz (z. B. 3-1-X-0), info, start (Startgewicht, bei zwei Kurzhanteln '2×8 kg'), pause (z. B. '2 min', '90 s', 'direkt zu B2'), schema, wdh (z. B. 8–12, '20 s', '30–45 s halten'), optional seite ('je Seite'), aufwaermsaetze (true: 10 / 50 % / 75 %), topsatz (true: in der topsatzWoche 1×5–8 @9), deckel (Hinweis-Etikett).",
+    "Erfassung (optional, sonst aus wdh und start abgeleitet): erfassung = Liste aus gewicht, wdh, zeit, band (z. B. ['zeit'] für Halten, ['zeit','gewicht'] für Halten mit Gewicht, ['band','wdh'] für Bänder). zeitmodus = halten (Stoppuhr, Zeit ist das Ergebnis), in_zeit (Countdown, Wdh. sind das Ergebnis), auf_zeit (Stoppuhr für feste Wdh.). gewicht = gesamt, je_hand oder je_seite (wie das Gewicht einzutragen ist). pause_s = Pause in Sekunden, wenn der Pausentext nicht eindeutig ist.",
+    "darstellung: saetze = normale Arbeitssätze; zirkel = Runden × wdh; runden = Runden mit Freitext in wdh; pausenfueller = 1 × wdh in jeder Pause des Hauptblocks; tabata = Intervalluhr, dazu tabata: {arbeit_s: 20, pause_s: 10, runden: 8, saetze: 1, satzpause_s: 60, uebungen: ['Kettlebell Swing', 'Air Squat']} (Übungen im Wechsel).",
     "regeln: Abschnitte für den Regeln-Reiter mit titel und optional absaetze, liste, tabelle {kopf, zeilen}. **fett** ist erlaubt.",
-    "tage: ein Eintrag pro Trainingstag in Wochenreihenfolge. wochentag = Mo, Di, Mi, Do, Fr, Sa oder So. aufwaermen = Abhakliste, skill/cooldown = Text oder null, hinweise = Liste, bloecke = Überschrift je Buchstabe (A, B, C ...).",
-    "uebungen: block (A, A+, B1, B2 ...; Supersätze teilen den Buchstaben), name, muskel, video (Suchbegriff, englisch findet mehr), kadenz (z. B. 3-1-X-0), info, start (Startgewicht), pause (z. B. '2 min', '90 s', 'direkt zu B2': danach startet der Pausentimer), schema, wdh (z. B. 8–12), optional seite ('je Seite'), aufwaermsaetze (true: 10 / 50 % / 75 %), topsatz (true: in der topsatzWoche 1×5–8 @9), deckel (Hinweis-Etikett, z. B. 'Schulter-Deckel').",
-    "darstellung: saetze = normale Arbeitssätze (Sätze × wdh @rpe); zirkel = Runden × wdh; runden = Runden mit Freitext in wdh; pausenfueller = 1 × wdh in jeder Pause des Hauptblocks.",
     "Das Feld _anleitung wird beim Hochladen ignoriert und darf bleiben oder gelöscht werden."
   ],
   "format": "slothly-plan/2",
@@ -116,7 +118,52 @@
         "Rudern 3 min",
         "Cat-Cow 8"
       ],
-      "skill": null,
+      "skill": {
+        "titel": "Handstand",
+        "dauer": "6 min",
+        "hinweis": "solange die Schultern frisch sind",
+        "wochen": [
+          [
+            {
+              "name": "Hollow Body Hold",
+              "vorgabe": "3×15 s",
+              "video": "hollow body hold"
+            },
+            {
+              "name": "Pike Push-up",
+              "vorgabe": "3×5",
+              "video": "pike push up"
+            }
+          ],
+          [
+            {
+              "name": "Hollow Body Hold",
+              "vorgabe": "3×20 s"
+            },
+            {
+              "name": "Pike Push-up",
+              "vorgabe": "3×6"
+            }
+          ],
+          [
+            {
+              "name": "Hollow Body Hold",
+              "vorgabe": "3×20 s"
+            },
+            {
+              "name": "Wall Walk bis ca. 45°",
+              "vorgabe": "3×1, 5 s halten",
+              "video": "wall walk"
+            }
+          ],
+          [
+            {
+              "name": "Wandhandstand-Test",
+              "vorgabe": "2 Versuche, Zeit notieren"
+            }
+          ]
+        ]
+      },
       "cooldown": "Dehnen nach Wahl",
       "hinweise": [
         "Hauptübung zuerst, Zirkel zum Schluss."
@@ -161,12 +208,13 @@
           "video": "one arm dumbbell row",
           "kadenz": "2-1-X-1",
           "info": null,
-          "start": "16 kg",
+          "start": "2×16 kg",
           "pause": "90 s",
           "schema": "NEBEN",
           "darstellung": "saetze",
           "wdh": "10–12",
-          "seite": "je Seite"
+          "seite": "je Seite",
+          "gewicht": "je_hand"
         },
         {
           "block": "C1",
@@ -192,7 +240,11 @@
           "pause": "60 s/Runde",
           "schema": "RUMPF",
           "darstellung": "zirkel",
-          "wdh": "30 s je Seite"
+          "wdh": "30 s je Seite",
+          "erfassung": [
+            "zeit"
+          ],
+          "zeitmodus": "halten"
         }
       ]
     },
@@ -208,7 +260,8 @@
       "hinweise": [],
       "bloecke": {
         "A": "Block A · Hauptübung",
-        "B": "Supersatz B"
+        "B": "Supersatz B",
+        "C": "Finisher C · Tabata"
       },
       "uebungen": [
         {
@@ -251,6 +304,29 @@
           "darstellung": "saetze",
           "wdh": "8–12",
           "seite": "je Seite"
+        },
+        {
+          "block": "C",
+          "name": "Tabata",
+          "muskel": "Ganzkörper",
+          "video": "tabata workout",
+          "info": "Runden im Wechsel, Wdh. in den Pausen eintragen",
+          "start": "KG",
+          "pause": "",
+          "schema": "RUMPF",
+          "darstellung": "tabata",
+          "wdh": null,
+          "tabata": {
+            "arbeit_s": 20,
+            "pause_s": 10,
+            "runden": 8,
+            "saetze": 1,
+            "satzpause_s": 60,
+            "uebungen": [
+              "Air Squat",
+              "Mountain Climber"
+            ]
+          }
         }
       ]
     }

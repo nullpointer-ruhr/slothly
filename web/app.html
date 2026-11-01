@@ -165,168 +165,390 @@ section.box{background:var(--surface);border:1px solid var(--line);border-radius
 table{border-collapse:collapse;width:100%;font-size:14px;font-variant-numeric:tabular-nums}
 th,td{border-bottom:1px solid var(--line);padding:6px 6px;text-align:left;vertical-align:top}
 th{font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.05em}
-/* timer */
-.timer{position:fixed;left:0;right:0;bottom:0;z-index:8;background:var(--ink);color:var(--surface);padding-bottom:env(safe-area-inset-bottom,0px)}
-.timer .wrap{display:flex;align-items:center;gap:10px;padding-block:10px}
-.timer .t{font-family:var(--f-display);font-size:34px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;min-width:84px}
-.timer .l{flex:1;min-width:0;font-size:13px;opacity:.8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.timer button{border:1px solid color-mix(in srgb,var(--surface) 35%,transparent);background:transparent;color:var(--surface);border-radius:9px;height:40px;padding:0 12px;cursor:pointer;font-weight:600}
-.timer.over .t{color:var(--done)}
+/* ---------- 0.2: Kopfzeile ---------- */
+/* Langer Planname darf die Seite nicht verbreitern (sonst zoomt iOS heraus und die Uhr ragt aus dem Bild, #7) */
+.top{align-items:center;min-width:0}
+.top h1{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topr{display:flex;align-items:center;gap:8px;flex:none}
+@media (max-width:480px){.status:not(.err){font-size:0}.status:not(.err) b{margin:0;width:9px;height:9px}}
+.clockbtn{flex:none;width:38px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--surface2);cursor:pointer;display:grid;place-items:center;padding:0}
+.clockbtn svg{width:20px;height:20px} .clockbtn svg *{stroke:var(--ink)}
+.runchip{border:0;background:var(--done);color:#fff;border-radius:999px;padding:4px 10px;font-size:13px;font-weight:600;cursor:pointer;font-variant-numeric:tabular-nums;white-space:nowrap}
+/* ---------- Training starten/beenden (#12) ---------- */
+.sess{display:grid;gap:8px}
+.go.wide{width:100%;height:48px;font-size:17px}
+.sinfo{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-size:14px}
+.sinfo b{font-variant-numeric:tabular-nums}
+.sbtns{display:flex;gap:8px;flex-wrap:wrap}
+.sbtns .tbtn{height:40px;display:inline-flex;align-items:center;font-size:14px}
+.badge{display:inline-block;border-radius:999px;padding:2px 9px;font-size:12px;font-weight:600}
+.badge.run{background:var(--done);color:#fff} .badge.ok{background:var(--done-soft);color:var(--done)} .badge.ab{background:var(--warn-soft);color:var(--warn)}
+.finbox{background:var(--accent-soft);border-radius:10px;padding:12px;display:grid;gap:10px;font-size:14px}
+.finbox ul{margin:0;padding-left:18px}
+.finbox label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
+.finbox input{height:40px;border:1px solid var(--line);border-radius:9px;background:var(--surface);padding:0 10px;font-size:16px}
+.warnbox{background:var(--warn-soft);color:var(--ink);border-radius:10px;padding:10px 12px;display:grid;gap:8px;font-size:14px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(80px + env(safe-area-inset-bottom));z-index:35;background:var(--ink);color:var(--surface);padding:8px 14px;border-radius:999px;font-size:14px;box-shadow:0 4px 14px rgba(0,0,0,.25)}
+/* ---------- Sätze: Felder je Erfassung (#10), Runden (#8) ---------- */
+.sr{display:grid;gap:6px;align-items:end;border-radius:10px;transition:background .2s}
+.sr .lb{font-family:var(--f-display);font-weight:600;font-size:16px;color:var(--muted);text-align:center;align-self:center;line-height:1.05;white-space:nowrap}
+.sr .lb small{display:block;font-family:var(--f-body);font-size:10px;font-weight:500}
+.sr .fi{display:grid;gap:2px;min-width:0}
+.sr .fi span{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;padding-left:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sr .iw{display:flex;gap:4px;min-width:0}
+.sr .clk{flex:none;width:40px;height:44px;border-radius:9px;border:1px solid var(--line);background:var(--surface);cursor:pointer;display:grid;place-items:center;padding:0}
+.sr .clk svg{width:18px;height:18px} .sr .clk svg *{stroke:var(--ink)}
+.sr .sb{align-self:end}
+.sr.next{background:var(--accent-soft);box-shadow:0 0 0 6px var(--accent-soft)}
+.sr.filler .lb{color:var(--warn)}
+.round{border-top:1px solid var(--line);padding:10px 14px 12px;display:grid;gap:10px}
+.round .rn{font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;display:flex;justify-content:space-between}
+.round.done .rn b{color:var(--done)}
+.round .ph{font-size:12px;color:var(--warn);margin:-4px 0 -4px 2px}
+.exd{border-top:1px solid var(--line)}
+.exd:first-of-type{border-top:0}
+.exd>summary{list-style:none;cursor:pointer;padding:10px 14px;display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center}
+.exd>summary::-webkit-details-marker{display:none}
+.exd>summary h4{margin:0;font-size:16px;font-weight:600;line-height:1.25}
+.exd>summary small{display:block;color:var(--muted);font-size:13px}
+.exd>summary .chev{color:var(--muted);transition:transform .2s}
+.exd[open]>summary .chev{transform:rotate(90deg)}
+.exd .exb{padding:0 14px 12px;display:grid;gap:8px}
+.ssrow{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:10px 14px 0}
+.ssrow .ss{padding:0}
+.vtog{border:1px solid var(--line);background:var(--surface2);border-radius:8px;padding:3px 8px;font-size:12px;cursor:pointer;color:var(--muted)}
+/* ---------- Skill-Block (#5) ---------- */
+.skhint{font-size:13px;color:var(--muted);padding:2px 14px 0}
+.ci .vid{margin-top:0;margin-left:6px;font-size:12px}
+/* ---------- Tabata im Plan (#11) ---------- */
+.tbres{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:6px}
+.tbres label{display:grid;gap:2px;font-size:10px;color:var(--muted);text-transform:uppercase}
+.tbres input{height:40px;border:1px solid var(--line);border-radius:9px;background:var(--surface2);padding:0 8px;font-size:16px;width:100%;min-width:0}
+.tbsum{font-size:14px;color:var(--muted)} .tbsum b{color:var(--ink)}
+/* ---------- Uhr: Leiste (#7/#9) ---------- */
+.timer{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--ink);color:var(--surface);padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:0 -2px 12px rgba(0,0,0,.2)}
+body.kb .timer{bottom:auto;top:0;padding-bottom:0;padding-top:env(safe-area-inset-top,0px)}
+.timer .wrap{display:flex;align-items:center;gap:10px;padding-block:8px}
+.timer .t{font-family:var(--f-display);font-size:34px;font-weight:700;font-variant-numeric:tabular-nums;line-height:1;min-width:78px;cursor:pointer}
+.timer .l{flex:1;min-width:0;display:grid;font-size:13px;line-height:1.25;cursor:pointer}
+.timer .l b{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.timer .l small{opacity:.8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.timer .tbs{display:flex;gap:6px;flex:none}
+.timer .tbs button{border:1px solid color-mix(in srgb,var(--surface) 35%,transparent);background:transparent;color:var(--surface);border-radius:9px;height:40px;padding:0 10px;cursor:pointer;font-weight:600;font-size:14px}
+.timer.over{background:var(--done)}
+.timer.next{background:color-mix(in srgb,var(--ink) 80%,var(--accent))}
 .timer .tb{position:absolute;left:0;top:0;height:3px;background:var(--accent)}
-:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-@media (max-width:380px){.sr{grid-template-columns:22px 1fr 1fr 54px 44px;gap:5px}.wk small{font-size:9px}}
+.timer.over .tb{background:#fff}
+/* ---------- Uhr: Fenster (#9) ---------- */
+.scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:29}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface);border-top:1px solid var(--line);border-radius:16px 16px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.25);padding:12px max(16px,env(safe-area-inset-left)) calc(16px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto;display:grid;gap:14px;max-width:720px;margin:0 auto}
+.sheet h3{margin:0;font-family:var(--f-display);font-size:22px;display:flex;justify-content:space-between;align-items:center}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:3px}
+.tabs button{border:0;background:transparent;border-radius:8px;padding:8px 4px;cursor:pointer;font-weight:600}
+.tabs button.on{background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.12)}
+.big{font-family:var(--f-display);font-size:68px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;line-height:1}
+.qrow{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
+.qrow button,.qrow .tbtn{min-width:64px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface2);cursor:pointer;font-weight:600;font-size:15px}
+.qrow .go{min-width:120px;height:48px;font-size:17px}
+.laps{display:grid;gap:2px;font-variant-numeric:tabular-nums;font-size:15px;max-height:30vh;overflow:auto}
+.laps div{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:4px 2px}
+.cfg{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
+.cfg label{display:grid;gap:4px;font-size:12px;color:var(--muted)}
+.cfg input{height:44px;border:1px solid var(--line);border-radius:9px;background:var(--surface2);padding:0 10px;font-size:17px;width:100%;min-width:0}
+/* ---------- Tabata Vollbild (#11) ---------- */
+.tbt{position:fixed;inset:0;z-index:40;display:grid;grid-template-rows:auto 1fr auto;gap:12px;padding:calc(14px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));color:#fff;background:#15181e;text-align:center}
+.tbt.work{background:#1d8549} .tbt.rest{background:#a9500f} .tbt.pre,.tbt.setrest{background:#1f4fd1}
+.tbt .hd{display:flex;justify-content:space-between;align-items:center;font-size:15px;font-weight:600}
+.tbt .ph{font-family:var(--f-display);font-size:34px;font-weight:700;text-transform:uppercase;letter-spacing:.04em}
+.tbt .num{font-family:var(--f-display);font-weight:700;font-size:min(40vw,240px);line-height:.95;font-variant-numeric:tabular-nums}
+.tbt .ex{font-size:20px;font-weight:600;border:0;padding:0} .tbt .nx{font-size:14px;opacity:.85}
+.tbt .mid{display:grid;align-content:center;gap:10px}
+.tbt .reps{display:grid;gap:8px;justify-items:center;background:rgba(0,0,0,.18);border-radius:16px;padding:12px}
+.tbt .reps .rr{display:flex;align-items:center;gap:18px}
+.tbt .reps button{width:64px;height:64px;border-radius:50%;border:2px solid rgba(255,255,255,.7);background:transparent;color:#fff;font-size:30px;font-weight:700;cursor:pointer}
+.tbt .reps b{font-family:var(--f-display);font-size:56px;min-width:80px}
+.tbt .foot{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.tbt .foot button{height:48px;padding:0 18px;border-radius:12px;border:2px solid rgba(255,255,255,.7);background:transparent;color:#fff;font-size:16px;font-weight:600;cursor:pointer}
+.tbt .sum{display:grid;gap:6px;font-size:16px}
+.tbt .sum .tbres label{color:rgba(255,255,255,.8)}
+.tbt .sum .tbres input{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.4);color:#fff}
+/* ---------- Verwaltung (#3) ---------- */
+.adm{display:grid;gap:10px;padding:14px}
+.adm h3{font-family:var(--f-display);font-size:20px;margin:0}
+.urow{border:1px solid var(--line);border-radius:10px;padding:10px;display:grid;gap:8px;font-size:14px}
+.urow .uh{display:flex;justify-content:space-between;gap:8px;align-items:baseline;flex-wrap:wrap}
+.urow small{color:var(--muted);font-size:12px}
+.urow .acts{display:flex;gap:6px;flex-wrap:wrap}
+.urow .acts .tbtn{height:36px;display:inline-flex;align-items:center}
+.codebig{font-family:var(--f-display);font-size:40px;font-weight:700;letter-spacing:.15em;font-variant-numeric:tabular-nums}
+.aform{display:grid;gap:8px;grid-template-columns:1fr 1fr}
+.aform input,.aform select,.uedit input{height:40px;border:1px solid var(--line);border-radius:9px;background:var(--surface2);padding:0 10px;font-size:16px;width:100%;min-width:0}
+.aform label{display:grid;gap:4px;font-size:12px;color:var(--muted);min-width:0}
+.aform .full{grid-column:1/-1}
+.chk{display:flex!important;align-items:center;gap:8px;font-size:14px!important;color:var(--ink)!important}
+.chk input{width:20px;height:20px}
+.uedit{display:grid;gap:6px}
+.msg{font-size:14px} .msg.err{color:var(--warn)} .msg.ok{color:var(--done)}
+@media (max-width:380px){.wk small{font-size:9px}.timer .t{font-size:28px;min-width:64px}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head><body>
 <header><div class="wrap">
-  <div class="top"><h1>Slothly</h1><div class="status" id="status"><b></b>lädt…</div></div>
+  <div class="top"><h1>Slothly</h1>
+    <div class="topr"><button type="button" class="runchip" id="runchip" hidden></button><div class="status" id="status"><b></b>lädt…</div>
+    <button type="button" class="clockbtn" id="clockbtn" aria-label="Uhr: Stoppuhr, Timer, Tabata"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5M12 2.5V5"/></svg></button></div></div>
   <div class="weeks" id="weeks"></div>
   <div class="days" id="days"></div>
 </div></header>
 <main><div class="wrap" id="main"></div></main>
 <div class="timer" id="timer" hidden><i class="tb" id="tbar"></i><div class="wrap">
-  <div class="t" id="tt">0:00</div><div class="l" id="tl">Pause</div>
-  <button type="button" id="tplus">+15 s</button><button type="button" id="tstop">Fertig</button>
+  <div class="t" id="tt" data-tact="open">0:00</div><div class="l" data-tact="open"><b id="tl"></b><small id="ts"></small></div>
+  <div class="tbs" id="tbs"></div>
 </div></div>
-
+<div id="overlay"></div>
+<div class="toast" id="toast" hidden></div>
 <script>
 (function(){
 "use strict";
-/* ---------- Plan aus der API (GET /api/plan) ---------- */
+/* ======================================================================
+   Slothly 0.2 · Oberfläche
+   Plan aus der API, Einträge je Einheit als ein Dokument (offline-fähig),
+   Uhr (Pause, Stoppuhr, Timer, Tabata), Trainingsstatus, Verschieben, Verwaltung.
+   ====================================================================== */
+const VERSION='0.2.0';
 let P=null,DAYS=[],PHASE=[],START=null,NW=6,ND=3,OFFS=[0,2,4];
-const vidUrl=e=>'https://www.youtube.com/results?search_query='+encodeURIComponent(e.q||e.n);
 const WD=['So','Mo','Di','Mi','Do','Fr','Sa'];
-let SKEY='',sched={reha:[],updatedAt:0};
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const md=t=>esc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+const ID=(w,d)=>'w'+w+'d'+(d+1);
+const vidUrl=q=>'https://www.youtube.com/results?search_query='+encodeURIComponent(q);
+const TICK='<svg viewBox="0 0 16 16"><path d="M3 8.5l3.2 3L13 4.5" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const TICKB='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+const CLKI='<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5"/></svg>';
+
+/* ---------- Datum ---------- */
 function iso(x){return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0')+'-'+String(x.getDate()).padStart(2,'0')}
+function fromIso(s){const p=s.split('-');return new Date(+p[0],p[1]-1,+p[2])}
+const isIso=s=>typeof s==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(s);
+const wdOf=x=>WD[x.getDay()];
+const fmtD=x=>String(x.getDate()).padStart(2,'0')+'.'+String(x.getMonth()+1).padStart(2,'0')+'.';
+const fmtDL=x=>wdOf(x)+' '+fmtD(x)+x.getFullYear();
+const hhmm=ms=>{const d=new Date(ms);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')};
+const today0=()=>{const t=new Date();t.setHours(0,0,0,0);return t};
+function fmtClock(s){s=Math.max(0,Math.round(s));const h=Math.floor(s/3600),m=Math.floor(s%3600/60),x=s%60;return (h?h+':'+String(m).padStart(2,'0'):m)+':'+String(x).padStart(2,'0')}
+
+/* ---------- Termine: Ausfalltage (alle rücken nach) und einzelne Verschiebungen (#6) ---------- */
+let sched={reha:[],updatedAt:0},moves={map:{},updatedAt:0},SKEY='',MKEY='';
 function slotDate(n){const x=new Date(START);x.setDate(x.getDate()+Math.floor(n/ND)*7+OFFS[n%ND]);return x}
 function slotOf(w,d){const k=(w-1)*ND+d,R=new Set(sched.reha);let c=-1;for(let n=0;;n++){if(!R.has(iso(slotDate(n)))){c++;if(c===k)return n}}}
-function dateOf(w,d){return slotDate(slotOf(w,d))}
-/* Angezeigtes Datum: tatsächlicher Trainingstag, falls eingetragen, sonst der geplante Termin. */
-function shownDate(w,d){const L=logs[ID(w,d)];if(L&&/^\d{4}-\d{2}-\d{2}$/.test(L.doneOn||'')){const p=L.doneOn.split('-');return new Date(+p[0],p[1]-1,+p[2])}return dateOf(w,d)}
-const isDone=(w,d)=>{const L=logs[ID(w,d)];return !!(L&&L.doneOn)}
+function plannedDate(w,d){return slotDate(slotOf(w,d))}
+function dateOf(w,d){const m=moves.map[ID(w,d)];return isIso(m)?fromIso(m):plannedDate(w,d)}
+/* Angezeigt: tatsächlicher Trainingstag, sonst verschobener, sonst geplanter Termin */
+function shownDate(w,d){const L=logs[ID(w,d)];return L&&isIso(L.doneOn)?fromIso(L.doneOn):dateOf(w,d)}
 function shiftOf(w,d){return slotOf(w,d)-((w-1)*ND+d)}
 function nextFree(w,d){const R=new Set(sched.reha);let n=slotOf(w,d)+1;while(R.has(iso(slotDate(n))))n++;return slotDate(n)}
-const wdOf=x=>WD[x.getDay()];
-function fmtD(x){return String(x.getDate()).padStart(2,'0')+'.'+String(x.getMonth()+1).padStart(2,'0')+'.'}
-function rx(e,w){const i=w-1,sc=(P.schemes[e.scheme]||[])[i]||[0,null],n=sc[0],r=sc[1];
+
+/* ---------- Vorgaben ---------- */
+function rx(e,w){const i=w-1,sc=(P.schemes[e.scheme]||[])[i]||[0,null],r=sc[1];let n=sc[0];
+  if(e.format==='tabata'&&e.tabata){const t=e.tabata;return{n:t.rounds*t.sets,t:'Tabata '+t.work+'/'+t.rest+' s × '+t.rounds+(t.sets>1?' × '+t.sets+' Sätze':'')}}
   if(e.top&&w===P.topsetWeek)return{n:1,t:'Topsatz 1×5–8 @9',top:1};
-  if(e.format==='per_pause')return{n,t:'1×'+(e.r||'')+' je A-Pause'};
+  if(e.format==='per_pause')return{n,t:'1×'+(e.r||'')+' je Pause'};
   if(e.format==='circuit')return{n,t:n+(n===1?' Runde':' Runden')+' × '+(e.r||'')};
   if(e.format==='rounds')return{n,t:n+' Runden ('+(e.r||'')+')'};
   return{n,t:n+'×'+(e.r||'')+(r?' @'+r:'')+(e.side?' · '+e.side:'')}}
-function pauseSec(s){if(!s)return 0;let m=s.match(/(\d+)\s*[–-]\s*(\d+)\s*min/);if(m)return 150;
-  m=s.match(/(\d+)\s*[–-]\s*(\d+)\s*s/);if(m)return +m[2];m=s.match(/^(\d+)\s*s/);if(m)return +m[1];return 0}
-const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-const ID=(w,d)=>'w'+w+'d'+(d+1);
-const TICK='<svg viewBox="0 0 16 16"><path d="M3 8.5l3.2 3L13 4.5" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>';
-const TICKB='<svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+/* #10: Erfassung je Übung (Server liefert fields/tmode/wref, abgeleitet oder aus dem Plan) */
+const FKEY={gewicht:'kg',wdh:'r',zeit:'t',band:'band'};
+const fieldsOf=e=>e.format==='tabata'?['wdh']:(e.fields&&e.fields.length?e.fields:['gewicht','wdh']);
+function capOf(e,f){if(f==='gewicht')return e.wref==='je_hand'?'kg/Hand':e.wref==='je_seite'?'kg/Seite':'kg';
+  return f==='wdh'?'Wdh.':f==='zeit'?(e.tmode==='auf_zeit'?'Zeit (s)':'Sek.'):'Band'}
+function secs(t){if(t==null||t==='')return null;const s=String(t).trim();let m=s.match(/^(\d+):(\d{2})$/);if(m)return +m[1]*60+ +m[2];
+  m=s.match(/^(\d+)\s*(s|sek)?$/i);if(m)return +m[1];m=s.match(/(\d+)\s*[–-]\s*(\d+)\s*s\b/);if(m)return +m[2];m=s.match(/(\d+)\s*s\b/);if(m)return +m[1];m=s.match(/(\d+(?:[.,]\d+)?)\s*min/);if(m)return Math.round(parseFloat(m[1].replace(',','.'))*60);return null}
+/* Wert eines Feldes; ältere Einträge hatten Zeiten im Wdh.-Feld („20 s“) */
+function fval(e,s,f){const k=FKEY[f];if(f==='zeit'&&(s.t==null||s.t==='')&&s.r&&/\d\s*s\b/.test(s.r))return String(secs(s.r));return s[k]==null?'':s[k]}
+function setText(e,s){const f=fieldsOf(e),out=[];
+  if(f.includes('gewicht')&&s.kg)out.push(s.kg+' '+(e.wref==='je_hand'?'kg/Hand':'kg'));
+  if(f.includes('band')&&s.band)out.push(s.band);
+  if(f.includes('wdh')&&s.r&&!(f.includes('zeit')&&/\d\s*s\b/.test(s.r)))out.push('× '+s.r);
+  if(f.includes('zeit')){const v=fval(e,s,'zeit');if(v)out.push(v+' s')}
+  if(s.rpe)out.push('@'+s.rpe);return out.join(' ')||'–'}
 
-/* ---------- state & storage ---------- */
+/* ---------- Speicher & Sync ---------- */
 let logs={},LKEY='';
-function saveLocal(){try{localStorage.setItem(LKEY,JSON.stringify(logs))}catch(e){}}
-function getLog(id){if(!logs[id])logs[id]={warm:[],skill:false,cool:false,ex:{},fb:{}};const L=logs[id];L.ex=L.ex||{};L.fb=L.fb||{};L.warm=L.warm||[];return L}
+function getLog(id){if(!logs[id])logs[id]={warm:[],sk:[],cool:false,ex:{},fb:{}};const L=logs[id];L.ex=L.ex||{};L.fb=L.fb||{};L.warm=L.warm||[];L.sk=L.sk||[];return L}
 function exLog(L,b){if(!L.ex[b])L.ex[b]={sets:[],wu:[],note:''};const E=L.ex[b];E.sets=E.sets||[];E.wu=E.wu||[];return E}
-const ver={},saved={},inflight={};let saveT=null,retryT=null,mode='init';
-/* mode: init | ok | offline (Netz weg, wird nachgeholt) | err */
+const statusOf=L=>!L?'offen':L.status||(isIso(L.doneOn)?'fertig':'offen');
+const ver={},saved={},inflight={};let saveT=null,retryT=null,mode='init',schedPend=false,movesPend=false;
 async function api(method,url,body){
   const r=await fetch(url,{method,credentials:'same-origin',headers:body?{'content-type':'application/json'}:{},body:body?JSON.stringify(body):undefined});
   if(r.status===401){location.href='/login';throw new Error('401')}
   return r}
+function store(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
 function setStatus(){const el=document.getElementById('status');
-  const pend=Object.keys(ver).some(k=>ver[k]!==saved[k])||schedPend;
+  const pend=Object.keys(ver).some(k=>ver[k]!==saved[k])||schedPend||movesPend;
   if(mode==='offline'){el.className='status err';el.innerHTML='<b></b>offline · '+(pend?'wird nachgeholt':'lokal');return}
-  if(mode==='err'){el.className='status err';el.innerHTML='<b></b>Speichern fehlgeschlagen';return}
+  if(mode==='err'){el.className='status err';el.innerHTML='<b></b>Fehler beim Speichern';return}
   if(mode==='init'){el.className='status';el.innerHTML='<b></b>verbindet…';return}
   el.className='status '+(pend?'busy':'ok');el.innerHTML='<b></b>'+(pend?'speichert…':'gespeichert')}
-/* Plan wurde gelöscht oder neu gestartet (anderes Gerät): lokalen Stand verwerfen, neu laden. */
-function dropAndReload(){try{localStorage.removeItem(LKEY);localStorage.removeItem(SKEY);localStorage.removeItem('slothly-plan')}catch(e){}location.reload()}
+function dropAndReload(){try{localStorage.removeItem(LKEY);localStorage.removeItem(SKEY);localStorage.removeItem(MKEY);localStorage.removeItem('slothly-plan')}catch(e){}location.reload()}
 const revQ=()=>'?rev='+(P.revision||0);
-function retryLater(){clearTimeout(retryT);retryT=setTimeout(()=>{flush();flushSched()},5000)}
-let schedPend=false;
-function touchSched(){sched.updatedAt=Date.now();try{localStorage.setItem(SKEY,JSON.stringify(sched))}catch(e){}schedPend=true;flushSched();renderMain();window.scrollTo(0,0)}
+function retryLater(){clearTimeout(retryT);retryT=setTimeout(()=>{flush();flushSched();flushMoves()},5000)}
+function touchSched(){sched.updatedAt=Date.now();store(SKEY,sched);schedPend=true;flushSched();renderMain()}
+function touchMoves(){moves.updatedAt=Date.now();store(MKEY,moves);movesPend=true;flushMoves();renderMain()}
 async function flushSched(){if(!schedPend||mode==='init')return;schedPend=false;
   try{const r=await api('PUT','/api/plans/'+P.id+'/skips'+revQ(),{dates:sched.reha.slice(),updatedAt:sched.updatedAt});
     if(r.status===404)return dropAndReload();
-    if(r.status===409){const d=await r.json();if(d.reload)return dropAndReload();sched={reha:d.dates||[],updatedAt:d.updatedAt||0};try{localStorage.setItem(SKEY,JSON.stringify(sched))}catch(e){}renderMain()}
-    else if(!r.ok)throw new Error(r.status);
-    mode='ok'}
-  catch(e){schedPend=true;mode='offline';retryLater()}
-  setStatus()}
-function touch(id){ver[id]=(ver[id]||0)+1;logs[id].updatedAt=Date.now();saveLocal();setStatus();clearTimeout(saveT);saveT=setTimeout(flush,700);refreshNav()}
-function saveLocal(){try{localStorage.setItem(LKEY,JSON.stringify(logs))}catch(e){}}
+    if(r.status===409){const d=await r.json();if(d.reload)return dropAndReload();sched={reha:d.dates||[],updatedAt:d.updatedAt||0};store(SKEY,sched);renderMain()}
+    else if(!r.ok)throw new Error(r.status);mode='ok'}
+  catch(e){schedPend=true;mode='offline';retryLater()}setStatus()}
+async function flushMoves(){if(!movesPend||mode==='init')return;movesPend=false;
+  try{const r=await api('PUT','/api/plans/'+P.id+'/moves'+revQ(),{map:moves.map,updatedAt:moves.updatedAt});
+    if(r.status===404)return dropAndReload();
+    if(r.status===409){const d=await r.json();if(d.reload)return dropAndReload();moves={map:d.map||{},updatedAt:d.updatedAt||0};store(MKEY,moves);renderMain()}
+    else if(!r.ok)throw new Error(r.status);mode='ok'}
+  catch(e){movesPend=true;mode='offline';retryLater()}setStatus()}
+function touch(id){ver[id]=(ver[id]||0)+1;logs[id].updatedAt=Date.now();store(LKEY,logs);setStatus();clearTimeout(saveT);saveT=setTimeout(flush,700);refreshNav();refreshRun()}
 async function flush(){if(mode==='init')return;
   for(const id of Object.keys(ver)){if(ver[id]===saved[id]||inflight[id])continue;inflight[id]=true;const v=ver[id];
     try{const r=await api('PUT','/api/plans/'+P.id+'/logs/'+id+revQ(),logs[id]);
       if(r.status===404)return dropAndReload();
-      if(r.status===409){const d=await r.json();if(d.reload)return dropAndReload();if(d.data){logs[id]=d.data;saveLocal();if(id===ID(S.w,S.d)&&S.view==='s')renderMain()}saved[id]=ver[id];mode='ok'}
-      else if(r.ok){saved[id]=v;mode='ok'}
-      else{mode='err'}}
+      if(r.status===409){const d=await r.json();if(d.reload)return dropAndReload();if(d.data){logs[id]=d.data;store(LKEY,logs);if(id===ID(S.w,S.d)&&S.view==='s')renderMain()}saved[id]=ver[id];mode='ok'}
+      else if(r.ok){saved[id]=v;mode='ok'}else mode='err'}
     catch(e){mode='offline';retryLater()}
     inflight[id]=false;if(mode==='ok'&&ver[id]!==saved[id])setTimeout(flush,400)}
-  saveLocal();setStatus()}
-/* Serverstand holen und mit dem lokalen Stand zusammenführen: neuerer Zeitstempel gewinnt,
-   lokale Änderungen ohne Bestätigung werden danach hochgeladen. */
+  store(LKEY,logs);setStatus()}
 async function pull(){
   try{const r=await api('GET','/api/plans/'+P.id+'/logs');if(r.status===404)return dropAndReload();if(!r.ok)throw new Error(r.status);
-    const d=await r.json(),cur=ID(S.w,S.d);let curChanged=false;
+    const d=await r.json(),cur=ID(S.w,S.d);let changed=false;
     if((d.revision||0)!==(P.revision||0))return dropAndReload();
     for(const [id,remote] of Object.entries(d.logs||{})){if(ver[id]!==undefined&&ver[id]!==saved[id])continue;
       const local=logs[id];
       if(local&&(local.updatedAt||0)>(remote.updatedAt||0)){ver[id]=(ver[id]||0)+1;continue}
-      if(!local||(remote.updatedAt||0)!==(local.updatedAt||0)){logs[id]=remote;if(id===cur)curChanged=true}}
+      if(!local||(remote.updatedAt||0)!==(local.updatedAt||0)){logs[id]=remote;if(id===cur)changed=true}}
     Object.keys(logs).forEach(id=>{if(!(id in (d.logs||{}))&&logs[id].updatedAt)ver[id]=(ver[id]||0)+1});
     const sk=d.skips||{dates:[],updatedAt:0};
-    if((sk.updatedAt||0)>(sched.updatedAt||0)){sched={reha:(sk.dates||[]).slice(),updatedAt:sk.updatedAt};try{localStorage.setItem(SKEY,JSON.stringify(sched))}catch(e){}curChanged=true}
+    if((sk.updatedAt||0)>(sched.updatedAt||0)){sched={reha:(sk.dates||[]).slice(),updatedAt:sk.updatedAt};store(SKEY,sched);changed=true}
     else if((sk.updatedAt||0)<(sched.updatedAt||0))schedPend=true;
-    mode='ok';saveLocal();refreshNav();
-    if(curChanged&&!document.activeElement.closest?.('#main'))renderMain();
-    flush();flushSched()}
+    const mv=d.moves||{map:{},updatedAt:0};
+    if((mv.updatedAt||0)>(moves.updatedAt||0)){moves={map:mv.map||{},updatedAt:mv.updatedAt};store(MKEY,moves);changed=true}
+    else if((mv.updatedAt||0)<(moves.updatedAt||0))movesPend=true;
+    mode='ok';store(LKEY,logs);refreshNav();refreshRun();
+    if(changed&&!document.activeElement.closest?.('#main'))renderMain();
+    flush();flushSched();flushMoves()}
   catch(e){if(e.message!=='401'){mode='offline';retryLater()}}
   setStatus()}
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&P)pull()});
 window.addEventListener('online',()=>{if(P)pull()});
 
-/* ---------- navigation ---------- */
+/* ---------- Navigation ---------- */
 const S={w:1,d:0,view:'s'};
-function pickToday(){const t=new Date();t.setHours(0,0,0,0);
-  for(let w=1;w<=NW;w++)for(let d=0;d<ND;d++){if(!isDone(w,d)&&dateOf(w,d)>=t||isDone(w,d)&&shownDate(w,d).getTime()===t.getTime()){S.w=w;S.d=d;return}}S.w=NW;S.d=ND-1}
+function runningId(){for(const [id,L] of Object.entries(logs))if(statusOf(L)==='laeuft')return id;return null}
+function pickToday(){const run=runningId();if(run){const m=/^w(\d+)d(\d)$/.exec(run);S.w=+m[1];S.d=+m[2]-1;return}
+  const t=today0();
+  for(let w=1;w<=NW;w++)for(let d=0;d<ND;d++){const L=logs[ID(w,d)],st=statusOf(L);
+    if(st==='offen'&&dateOf(w,d)>=t||st!=='offen'&&shownDate(w,d).getTime()===t.getTime()){S.w=w;S.d=d;return}}
+  S.w=NW;S.d=ND-1}
 function progress(w,d){const L=logs[ID(w,d)];let tot=0,done=0;
   DAYS[d].ex.forEach(e=>{const n=rx(e,w).n;tot+=n;const E=L&&L.ex&&L.ex[e.b];if(E&&E.sets)for(let i=0;i<n;i++)if(E.sets[i]&&E.sets[i].d)done++});return{tot,done}}
+function dayMark(w,d){const st=statusOf(logs[ID(w,d)]);return st==='fertig'?' <span class="ok">✓</span>':st==='laeuft'?' <span class="ok">●</span>':st==='abgebrochen'?' <span style="color:var(--warn)">✕</span>':''}
 function refreshNav(){
-  let h='';for(let w=1;w<=NW;w++){let dots='';for(let d=0;d<ND;d++){const p=progress(w,d);dots+='<i class="'+(p.done>=p.tot?'f':p.done?'p':'')+'"></i>'}
+  let h='';for(let w=1;w<=NW;w++){let dots='';for(let d=0;d<ND;d++){const st=statusOf(logs[ID(w,d)]),p=progress(w,d);dots+='<i class="'+(st==='fertig'||p.tot&&p.done>=p.tot?'f':st!=='offen'||p.done?'p':'')+'"></i>'}
     h+='<button type="button" class="wk'+(S.view==='s'&&S.w===w?' on':'')+'" data-w="'+w+'">W'+w+'<small>'+fmtD(shownDate(w,0))+'</small><span class="dots">'+dots+'</span></button>'}
   h+='<button type="button" class="wk'+(S.view==='r'?' on':'')+'" data-rules="1">§<small>Regeln</small><span class="dots"></span></button>';
   document.getElementById('weeks').innerHTML=h;
-  let dh='';DAYS.forEach((D,d)=>{const p=progress(S.w,d);
-    const dt=shownDate(S.w,d);
-    dh+='<button type="button" class="day'+(S.view==='s'&&S.d===d?' on':'')+'" data-d="'+d+'"><b>'+wdOf(dt)+' '+fmtD(dt)+(p.done>=p.tot?' <span class="ok">✓</span>':'')+'</b><small>'+esc(D.title)+'</small></button>'});
+  let dh='';DAYS.forEach((D,d)=>{const dt=shownDate(S.w,d);
+    dh+='<button type="button" class="day'+(S.view==='s'&&S.d===d?' on':'')+'" data-d="'+d+'"><b>'+wdOf(dt)+' '+fmtD(dt)+dayMark(S.w,d)+'</b><small>'+esc(D.title)+'</small></button>'});
   document.getElementById('days').innerHTML=dh;
   const pb=document.getElementById('pbar');if(pb){const p=progress(S.w,S.d);pb.style.width=(p.tot?p.done/p.tot*100:0)+'%';document.getElementById('plbl').textContent=p.done+' / '+p.tot+' Sätze'}}
 document.getElementById('weeks').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;
-  if(b.dataset.rules){S.view='r'}else{S.view='s';S.w=+b.dataset.w}refreshNav();renderMain();window.scrollTo(0,0)});
-document.getElementById('days').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;S.view='s';S.d=+b.dataset.d;refreshNav();renderMain();window.scrollTo(0,0)});
+  if(b.dataset.rules)S.view='r';else{S.view='s';S.w=+b.dataset.w}renderMain();window.scrollTo(0,0)});
+document.getElementById('days').addEventListener('click',ev=>{const b=ev.target.closest('button');if(!b)return;S.view='s';S.d=+b.dataset.d;renderMain();window.scrollTo(0,0)});
+/* Laufende Einheit in der Kopfzeile (#12) */
+function refreshRun(){const c=document.getElementById('runchip'),id=runningId();
+  if(!id){c.hidden=true;return}const L=logs[id];c.hidden=false;c.dataset.id=id;
+  c.textContent='● '+fmtClock((Date.now()-(L.startedAt||Date.now()))/1000)}
+document.getElementById('runchip').addEventListener('click',ev=>{const m=/^w(\d+)d(\d)$/.exec(ev.currentTarget.dataset.id||'');if(!m)return;S.view='s';S.w=+m[1];S.d=+m[2]-1;renderMain();window.scrollTo(0,0)});
+setInterval(()=>{refreshRun();const el=document.getElementById('sclock');if(el){const L=logs[ID(S.w,S.d)];if(L&&L.startedAt)el.textContent=fmtClock((Date.now()-L.startedAt)/1000)}},1000);
 
-/* ---------- session render ---------- */
+/* ---------- Einheit: Start, Ende, Abbruch (#12) ---------- */
+let sessUI=null;   // null | 'finish' | 'abort' | 'switch'
+function lastSetAt(L){let m=0;Object.values(L.ex||{}).forEach(E=>(E.sets||[]).forEach(s=>{if(s&&s.at>m)m=s.at}));return m||null}
+function startSession(L,at){L.status='laeuft';L.startedAt=at||Date.now();delete L.finishedAt;delete L.durS;if(!isIso(L.doneOn))L.doneOn=iso(new Date(L.startedAt))}
+function finishSession(L,at){L.status='fertig';L.finishedAt=Math.max(at,L.startedAt||at);if(L.startedAt){L.durS=Math.round((L.finishedAt-L.startedAt)/1000);if(!L.fb.dur)L.fb.dur=String(Math.round(L.durS/60))}if(!isIso(L.doneOn))L.doneOn=iso(new Date(L.finishedAt))}
+function sessBox(w,d){const id=ID(w,d),L=getLog(id),st=statusOf(L);
+  const other=runningId();
+  if(st==='offen'){
+    if(sessUI==='switch'&&other&&other!==id){const m=/^w(\d+)d(\d)$/.exec(other),oL=logs[other];
+      return '<div class="warnbox"><span>Die Einheit W'+m[1]+' Tag '+m[2]+' läuft noch (seit '+hhmm(oL.startedAt)+').</span><div class="sbtns"><button type="button" class="go" data-act="sw-finish">Jene beenden und hier starten</button><button type="button" class="tbtn" data-act="ui-close">Abbrechen</button></div></div>'}
+    return '<button type="button" class="go wide" data-act="s-start">Training starten</button>'}
+  if(st==='laeuft'){
+    const stale=Date.now()-L.startedAt>3*3600e3||iso(new Date(L.startedAt))!==iso(new Date());
+    let h='<div class="sinfo"><span><span class="badge run">läuft</span> seit '+hhmm(L.startedAt)+' · <b id="sclock">'+fmtClock((Date.now()-L.startedAt)/1000)+'</b></span>'+
+      '<span class="sbtns"><button type="button" class="go" data-act="s-finish">Training beenden</button><button type="button" class="tbtn" data-act="s-abort">Abbrechen</button></span></div>';
+    if(stale&&!sessUI){const la=lastSetAt(L)||L.startedAt+60*60e3;
+      h='<div class="warnbox"><span>Diese Einheit läuft seit '+fmtDL(new Date(L.startedAt))+', '+hhmm(L.startedAt)+'. Vergessen zu beenden?</span>'+
+        '<div class="sbtns"><button type="button" class="go" data-act="s-end-at" data-v="'+la+'">Um '+hhmm(la)+' beenden (letzter Satz)</button><button type="button" class="tbtn" data-act="s-finish">Anderes Ende…</button></div></div>'+h}
+    if(sessUI==='finish')h+=finishBox(w,d,L);
+    if(sessUI==='abort')h+='<div class="finbox"><b>Einheit abbrechen?</b><span>Die Einträge bleiben erhalten, die Einheit gilt als abgebrochen.</span>'+
+      '<label>Grund (optional)<input id="abortwhy" maxlength="200" placeholder="z. B. Schulter, keine Zeit"></label>'+
+      '<div class="sbtns"><button type="button" class="go" data-act="s-abort-ok">Abbrechen bestätigen</button><button type="button" class="tbtn" data-act="ui-close">Zurück</button></div></div>';
+    return h}
+  if(st==='fertig')return '<div class="sinfo"><span><span class="badge ok">fertig</span> '+(L.startedAt?hhmm(L.startedAt)+'–'+hhmm(L.finishedAt||L.startedAt)+' · ':'')+(L.durS?Math.round(L.durS/60)+' min':L.fb.dur?L.fb.dur+' min':'')+'</span><span class="sbtns"><button type="button" class="tbtn" data-act="s-reopen">Wieder öffnen</button></span></div>';
+  return '<div class="sinfo"><span><span class="badge ab">abgebrochen</span> '+esc(L.abortReason||'')+'</span><span class="sbtns"><button type="button" class="tbtn" data-act="s-reopen">Wieder öffnen</button></span></div>'}
+function finishBox(w,d,L){const D=DAYS[d],p=progress(w,d),open=[];
+  D.ex.forEach(e=>{const n=rx(e,w).n,E=L.ex[e.b];let c=0;if(E)for(let i=0;i<n;i++)if(E.sets[i]&&E.sets[i].d)c++;if(c<n)open.push(e.b+' '+e.n+' ('+c+'/'+n+')')});
+  const now=Date.now(),dur=(now-L.startedAt)/1000;
+  return '<div class="finbox"><b>Training beenden</b>'+
+    '<span>Dauer <b>'+fmtClock(dur)+'</b> · Sätze <b>'+p.done+' / '+p.tot+'</b></span>'+
+    (open.length?'<div><span>Noch offen:</span><ul>'+open.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>':'<span>Alle Sätze erledigt.</span>')+
+    (L.fb.form?'':'<div><span>Tagesform heute?</span><div class="form5" style="margin-top:6px">'+[1,2,3,4,5].map(n=>'<button type="button" data-act="form" data-v="'+n+'">'+n+'</button>').join('')+'</div></div>')+
+    '<label>Ende (falls vergessen)<input type="time" id="finat" value="'+hhmm(now)+'"></label>'+
+    '<div class="sbtns"><button type="button" class="go" data-act="s-finish-ok">Beenden</button><button type="button" class="tbtn" data-act="ui-close">Weiter trainieren</button></div></div>'}
+
+/* ---------- Verschieben (#6) ---------- */
+let moveUI=false;
+function moveBox(w,d){const id=ID(w,d),L=logs[id],st=statusOf(L);if(st==='fertig'||st==='abgebrochen')return '';
+  const planned=plannedDate(w,d),mv=moves.map[id];
+  let h='';
+  if(isIso(mv))h+='<div class="sinfo"><span>Verschoben auf <b>'+fmtDL(fromIso(mv))+'</b> (geplant '+wdOf(planned)+' '+fmtD(planned)+')</span><span class="sbtns"><button type="button" class="tbtn" data-act="mv-undo">Verschiebung aufheben</button></span></div>';
+  if(!moveUI)return h+'<button type="button" class="rehabtn" data-act="mv-open">Einheit verschieben</button>';
+  const tm=new Date();tm.setDate(tm.getDate()+1);const nx=nextFree(w,d);
+  return h+'<div class="rconf"><b>Einheit verschieben</b>'+
+    '<label class="chk"><input type="radio" name="mvk" value="one" checked> Nur diese Einheit, alle anderen bleiben</label>'+
+    '<div class="sbtns" id="mvdate"><input type="date" id="mvd" value="'+iso(tm)+'" style="height:40px;border:1px solid var(--line);border-radius:9px;padding:0 10px;background:var(--surface);font-size:16px">'+
+      '<button type="button" class="tbtn" data-act="mv-q" data-v="'+iso(tm)+'">Morgen</button><button type="button" class="tbtn" data-act="mv-q" data-v="'+iso(nx)+'">Nächster Trainingstag ('+wdOf(nx)+')</button></div>'+
+    '<span id="mvwarn" style="color:var(--warn)"></span>'+
+    '<label class="chk"><input type="radio" name="mvk" value="all"> Diese und alle folgenden rücken je einen Termin weiter ('+wdOf(planned)+' '+fmtD(planned)+' fällt aus, diese Einheit kommt '+wdOf(nx)+' '+fmtD(nx)+')</label>'+
+    '<div class="btns"><button type="button" class="go" data-act="mv-ok">Verschieben</button><button type="button" class="tbtn" data-act="mv-close">Abbrechen</button></div></div>'}
+function moveWarn(){const el=document.getElementById('mvwarn'),v=(document.getElementById('mvd')||{}).value;if(!el)return;el.textContent='';
+  if(!isIso(v))return;for(let w=1;w<=NW;w++)for(let d=0;d<ND;d++){if(w===S.w&&d===S.d)continue;if(iso(shownDate(w,d))===v){el.textContent='Am '+fmtD(fromIso(v))+' liegt schon W'+w+' Tag '+(d+1)+' ('+DAYS[d].title+').';return}}}
+
+/* ---------- Einheit darstellen ---------- */
+const VKEY='slothly-view';let VIEW='runden';try{VIEW=localStorage.getItem(VKEY)||'runden'}catch(e){}
 function lastFor(d,b,w){for(let x=w-1;x>=1;x--){const L=logs[ID(x,d)];const E=L&&L.ex&&L.ex[b];
-  if(E&&E.sets&&E.sets.some(s=>s&&(s.kg||s.r))){return{w:x,sets:E.sets.filter(s=>s&&(s.kg||s.r))}}}return null}
-function checkItem(attrs,on,text,sub){return '<button type="button" class="ci'+(on?' on':'')+'" '+attrs+'><span class="tick">'+TICK+'</span><span class="tx">'+esc(text)+(sub?'<small>'+esc(sub)+'</small>':'')+'</span></button>'}
-function rehaBox(conf){const w=S.w,d=S.d,dt=dateOf(w,d),nx=nextFree(w,d);
-  if(!conf)return '<button type="button" class="rehabtn" data-act="reha">Heute aussetzen · Einheit verschieben</button>';
-  return '<div class="rconf"><span>'+wdOf(dt)+' '+fmtD(dt)+' fällt aus. Diese Einheit rückt auf <b>'+wdOf(nx)+' '+fmtD(nx)+'</b>, alle folgenden Einheiten je einen Termin weiter.</span>'+
-   '<div class="btns"><button type="button" class="go" data-act="rehaok">Überspringen</button><button type="button" class="tbtn" data-act="rehano">Abbrechen</button></div></div>'}
-function renderSession(){const w=S.w,d=S.d,D=DAYS[d],id=ID(w,d),L=getLog(id),dt=shownDate(w,d),sh=L.doneOn?0:shiftOf(w,d);
+  if(E&&E.sets&&E.sets.some(s=>s&&(s.kg||s.r||s.t||s.band)))return{w:x,sets:E.sets.filter(s=>s&&(s.kg||s.r||s.t||s.band))}}return null}
+function checkItem(attrs,on,text,sub,q){return '<button type="button" class="ci'+(on?' on':'')+'" '+attrs+'><span class="tick">'+TICK+'</span><span class="tx">'+esc(text)+(q?'<a class="vid" href="'+vidUrl(q)+'" target="_blank" rel="noopener">▶</a>':'')+(sub?'<small>'+esc(sub)+'</small>':'')+'</span></button>'}
+function groupsOf(D){const gs=[];D.ex.forEach(e=>{const g=e.b==='A+'?'A':e.b[0];let G=gs.find(x=>x.g===g);if(!G){G={g,ex:[]};gs.push(G)}G.ex.push(e)});return gs}
+function renderSession(){const w=S.w,d=S.d,D=DAYS[d],id=ID(w,d),L=getLog(id),dt=shownDate(w,d),sh=isIso(L.doneOn)||moves.map[id]?0:shiftOf(w,d);
   let h='<div class="meta"><div><span class="phase">Woche '+w+' · '+esc(PHASE[w-1]||'')+'</span><h2>Tag '+(d+1)+' · '+esc(D.title)+'</h2></div>'+
    '<p>'+wdOf(dt)+', '+fmtD(dt)+dt.getFullYear()+(P.dayNote?' · '+esc(P.dayNote):'')+'</p>'+
    (sh?'<p class="shift">Wegen Ausfall um '+sh+' Termin'+(sh>1?'e':'')+' verschoben</p>':'')+
-   '<div id="rehabox">'+rehaBox(false)+'</div>'+
+   '<div class="sess" id="sessbox">'+sessBox(w,d)+'</div>'+
+   '<div class="sess" id="movebox">'+moveBox(w,d)+'</div>'+
    '<div class="bar"><i id="pbar"></i></div><div class="barlbl"><span>Fortschritt</span><span id="plbl"></span></div></div>';
-  if(D.warm&&D.warm.length||D.skill){h+='<section class="box"><div class="boxh"><h3>Aufwärmen</h3><span>5–8 min, je 1 Runde</span></div><div class="checks">';
-  (D.warm||[]).forEach((t,i)=>{h+=checkItem('data-act="warm" data-i="'+i+'"',L.warm[i],t)});
-  if(D.skill)h+=checkItem('data-act="skill"',L.skill,'Skill (optional, 6 min)',D.skill);
-  h+='</div></section>'}
-  const groups=[];D.ex.forEach(e=>{const g=e.b==='A+'?'A':e.b[0];let G=groups.find(x=>x.g===g);if(!G){G={g,ex:[]};groups.push(G)}G.ex.push(e)});
+  if(D.warm&&D.warm.length){h+='<section class="box"><div class="boxh"><h3>Aufwärmen</h3><span>je 1 Runde</span></div><div class="checks">';
+    D.warm.forEach((t,i)=>{h+=checkItem('data-act="warm" data-i="'+i+'"',L.warm[i],t)});h+='</div></section>'}
+  const SB=D.skillBlock;
+  if(SB&&SB.weeks&&SB.weeks.length){const items=SB.weeks[Math.min(w,SB.weeks.length)-1]||[];
+    h+='<section class="box"><div class="boxh"><h3>Skill · '+esc(SB.title)+'</h3><span>'+esc(SB.dur||'')+'</span></div>'+(SB.hint?'<p class="skhint">'+esc(SB.hint)+'</p>':'')+'<div class="checks">';
+    items.forEach((it,i)=>{h+=checkItem('data-act="sk" data-i="'+i+'"',L.sk[i],it.n,it.v,it.q)});
+    h+='</div><div style="padding:0 14px 12px"><textarea class="note" id="sknote-'+id+'" data-sknote="1" rows="1" placeholder="Notiz, z. B. Zeit beim Test">'+esc(L.skNote)+'</textarea></div></section>'}
   const gname=D.groups||{};
-  groups.forEach(G=>{h+='<section class="box"><span class="ss">'+esc(gname[G.g]||('Block '+G.g))+'</span>';G.ex.forEach(e=>{h+=renderEx(e,w,d,L)});h+='</section>'});
+  groupsOf(D).forEach(G=>{const multi=G.ex.filter(e=>e.format!=='tabata').length>1;
+    h+='<section class="box" data-g="'+G.g+'"><div class="ssrow"><span class="ss">'+esc(gname[G.g]||('Block '+G.g))+'</span>'+
+      (multi?'<button type="button" class="vtog" data-act="view">'+(VIEW==='runden'?'Ansicht: Runden':'Ansicht: Übungen')+'</button>':'')+'</div>';
+    if(multi&&VIEW==='runden')h+=renderRounds(G,w,d,L);
+    else G.ex.forEach(e=>{h+=e.format==='tabata'?renderTabataEx(e,w,d,L):renderEx(e,w,d,L)});
+    h+='</section>'});
   if(D.cool)h+='<section class="box"><div class="boxh"><h3>Cool-down</h3><span>optional</span></div><div class="checks">'+checkItem('data-act="cool"',L.cool,D.cool)+'</div></section>';
   if(D.notes&&D.notes.length)h+='<section class="box"><div class="boxh"><h3>Hinweise</h3></div><div class="hint">'+D.notes.map(n=>'<span>'+esc(n)+'</span>').join('')+'</div></section>';
   const F=L.fb;
@@ -338,60 +560,104 @@ function renderSession(){const w=S.w,d=S.d,D=DAYS[d],id=ID(w,d),L=getLog(id),dt=
    '<label>Schmerzen / Beschwerden (wo, Übung, 0–10, Folgetag)<textarea id="fb-p-'+id+'" data-fb="pain">'+esc(F.pain)+'</textarea></label>'+
    '<label>Was war zu leicht, was zu schwer?<textarea id="fb-e-'+id+'" data-fb="easy">'+esc(F.easy)+'</textarea></label>'+
    '<label>Was will ich nächste Woche ändern?<textarea id="fb-c-'+id+'" data-fb="change">'+esc(F.change)+'</textarea></label>'+
+   (statusOf(L)==='laeuft'?'<button type="button" class="go wide" data-act="s-finish">Training beenden</button>':'')+
    '</div></section>';
   return h}
 function formHint(v){if(!v)return '1 sehr schlecht · 2 schlecht · 3 okay · 4 gut · 5 sehr gut';return v<=2?'Gewicht halten oder 5–10 % weniger.':'Plan wie geschrieben.'}
-function renderEx(e,w,d,L){const R=rx(e,w),E=exLog(L,e.b),id=ID(w,d),reha=e.b[0]==='E';
-  const capNote=e.cap?'<span class="fact sh">'+esc(e.cap)+'</span>':'';
-  let h='<div class="ex" data-b="'+e.b+'"><div class="exh"><span class="blk'+(reha?' reha':'')+'">'+e.b+'</span><div class="exn"><h4>'+esc(e.n)+'</h4><a class="vid" href="'+vidUrl(e)+'" target="_blank" rel="noopener">▶ Video ansehen</a><div class="mu">'+[e.m,e.k?'Kadenz '+e.k:'',e.i].filter(Boolean).map(esc).join(' · ')+'</div></div></div>';
-  h+='<div class="facts"><span class="fact rx">'+esc(R.t)+'</span>'+(e.st?'<span class="fact">Start: '+esc(e.st)+'</span>':'')+(e.pa?'<span class="fact">Pause: '+esc(e.pa)+'</span>':'')+''+capNote+'</div>';
-  const last=lastFor(d,e.b,w);
-  if(last)h+='<div class="last">Letztes Mal (W'+last.w+'): <b>'+last.sets.map(s=>(s.kg?esc(s.kg)+' kg':'–')+' × '+(s.r?esc(s.r):'–')+(s.rpe?' @'+esc(s.rpe):'')).join(' · ')+'</b></div>';
-  if(e.wu)h+='<div class="ramp">Aufwärmsätze:'+['10 ohne','50 % × 8','75 % × 4'].map((t,i)=>'<button type="button" class="rb'+(E.wu[i]?' on':'')+'" data-act="wu" data-b="'+e.b+'" data-i="'+i+'"><span class="tick'+(E.wu[i]?' on':'')+'">'+TICK+'</span>'+t+'</button>').join('')+'</div>';
-  h+='<div class="sets"><div class="sr hd"><span></span><span>kg</span><span>Wdh.</span><span>RPE</span><span></span></div>';
-  const prevSets=last?last.sets:[];
-  for(let i=0;i<R.n;i++){const s=E.sets[i]||{};const pk=(prevSets[i]&&prevSets[i].kg)||(prevSets[0]&&prevSets[0].kg)||'';
-    const base='set-'+id+'-'+e.b+'-'+i;
-    h+='<div class="sr'+(s.d?' done':'')+'"><span class="sn">'+(R.top?'T':i+1)+'</span>'+
-     '<input id="'+base+'-kg" data-b="'+e.b+'" data-i="'+i+'" data-k="kg" inputmode="decimal" placeholder="'+esc(pk)+'" value="'+esc(s.kg)+'" aria-label="Satz '+(i+1)+' kg">'+
-     '<input id="'+base+'-r" data-b="'+e.b+'" data-i="'+i+'" data-k="r" inputmode="numeric" placeholder="'+esc(e.format==='standard'||e.format==='per_pause'?(e.r||''):'').replace('–','-')+'" value="'+esc(s.r)+'" aria-label="Satz '+(i+1)+' Wiederholungen">'+
-     '<input id="'+base+'-rpe" data-b="'+e.b+'" data-i="'+i+'" data-k="rpe" inputmode="decimal" value="'+esc(s.rpe)+'" aria-label="Satz '+(i+1)+' RPE">'+
-     '<button type="button" class="sb'+(s.d?' on':'')+'" data-act="set" data-b="'+e.b+'" data-i="'+i+'" aria-label="Satz '+(i+1)+' erledigt">'+TICKB+'</button></div>'}
-  h+='</div><textarea class="note" id="note-'+id+'-'+e.b+'" data-note="'+e.b+'" rows="1" placeholder="Kommentar">'+esc(E.note)+'</textarea></div>';
+/* Kopf einer Übung: Name, Video, Vorgabe, Start, Pause, letztes Mal, Aufwärmsätze */
+function exInfo(e,w,d,L,withName){const R=rx(e,w),E=exLog(L,e.b),last=lastFor(d,e.b,w);
+  let h='';
+  if(withName)h+='<div class="exh"><span class="blk'+(e.b[0]==='E'?' reha':'')+'">'+esc(e.b)+'</span><div class="exn"><h4>'+esc(e.n)+'</h4>';
+  h+=(withName?'':'<div>')+'<a class="vid" href="'+vidUrl(e.q||e.n)+'" target="_blank" rel="noopener">▶ Video ansehen</a><div class="mu">'+[e.m,e.k?'Kadenz '+e.k:'',e.i].filter(Boolean).map(esc).join(' · ')+'</div></div>'+(withName?'</div>':'');
+  h+='<div class="facts"><span class="fact rx">'+esc(R.t)+'</span>'+(e.st?'<span class="fact">Start: '+esc(e.st)+'</span>':'')+(e.pa?'<span class="fact">Pause: '+esc(e.pa)+'</span>':'')+(e.cap?'<span class="fact sh">'+esc(e.cap)+'</span>':'')+'</div>';
+  if(last)h+='<div class="last">Letztes Mal (W'+last.w+'): <b>'+last.sets.map(s=>esc(setText(e,s))).join(' · ')+'</b></div>';
+  if(e.wu)h+='<div class="ramp">Aufwärmsätze:'+['10 ohne','50 % × 8','75 % × 4'].map((t,i)=>'<button type="button" class="rb'+(E.wu[i]?' on':'')+'" data-act="wu" data-b="'+esc(e.b)+'" data-i="'+i+'"><span class="tick'+(E.wu[i]?' on':'')+'">'+TICK+'</span>'+t+'</button>').join('')+'</div>';
   return h}
+/* Eine Satzzeile mit den Feldern der Übung (#10). lbl: Satznummer bzw. Block-Label in der Rundenansicht */
+function rowHtml(e,w,d,L,i,lbl,caps){const E=exLog(L,e.b),s=E.sets[i]||{},R=rx(e,w),f=fieldsOf(e),last=lastFor(d,e.b,w),prev=last?last.sets:[];
+  const pv=k=>{const p=prev[i]||prev[0];return p?(k==='t'?fval(e,p,'zeit'):p[k]||''):''};
+  const base='set-'+ID(w,d)+'-'+e.b+'-'+i;
+  let cells='';
+  f.forEach(fl=>{const k=FKEY[fl];let ph=pv(k);
+    if(!ph&&fl==='wdh')ph=(e.format==='standard'||e.format==='per_pause')?String(e.r||'').replace('–','-'):'';
+    if(!ph&&fl==='zeit'){const sv=secs(e.r);ph=sv?String(sv):''}
+    if(!ph&&fl==='band'&&/band/i.test(e.st||''))ph=String(e.st).replace(/^band\s*/i,'');
+    const im=fl==='gewicht'?'decimal':fl==='band'?'text':'numeric';
+    const clk=fl==='zeit'||(fl==='wdh'&&e.tmode==='in_zeit')?'<button type="button" class="clk" data-act="rowclk" data-b="'+esc(e.b)+'" data-i="'+i+'" aria-label="Uhr für diesen Satz">'+CLKI+'</button>':'';
+    cells+='<label class="fi">'+(caps?'<span>'+esc(capOf(e,fl))+'</span>':'')+'<span class="iw"><input id="'+base+'-'+k+'" data-b="'+esc(e.b)+'" data-i="'+i+'" data-k="'+k+'" inputmode="'+im+'" placeholder="'+esc(ph)+'" value="'+esc(fval(e,s,fl))+'" aria-label="'+esc(e.b+' Satz '+(i+1)+' '+capOf(e,fl))+'">'+clk+'</span></label>'});
+  cells+='<label class="fi">'+(caps?'<span>RPE</span>':'')+'<input id="'+base+'-rpe" data-b="'+esc(e.b)+'" data-i="'+i+'" data-k="rpe" inputmode="decimal" value="'+esc(s.rpe)+'" aria-label="'+esc(e.b+' Satz '+(i+1))+' RPE"></label>';
+  const cols='34px repeat('+f.length+',minmax(0,1fr)) 56px 44px';
+  return '<div class="sr'+(s.d?' done':'')+(e.format==='per_pause'?' filler':'')+'" style="grid-template-columns:'+cols+'" data-b="'+esc(e.b)+'" data-i="'+i+'" data-lbl="'+esc(e.b+' '+e.n+' · Satz '+(i+1))+'">'+
+    '<span class="lb">'+lbl+'</span>'+cells+
+    '<button type="button" class="sb'+(s.d?' on':'')+'" data-act="set" data-b="'+esc(e.b)+'" data-i="'+i+'" aria-label="'+esc(e.b)+' Satz '+(i+1)+' erledigt">'+TICKB+'</button></div>'}
+function renderEx(e,w,d,L){const R=rx(e,w),E=exLog(L,e.b);
+  let h='<div class="ex" data-ex="'+esc(e.b)+'">'+exInfo(e,w,d,L,true)+'<div class="sets">';
+  for(let i=0;i<R.n;i++)h+=rowHtml(e,w,d,L,i,R.top?'T':String(i+1),i===0);
+  return h+'</div><textarea class="note" id="note-'+ID(w,d)+'-'+esc(e.b)+'" data-note="'+esc(e.b)+'" rows="1" placeholder="Kommentar">'+esc(E.note)+'</textarea></div>'}
+/* #8: Supersatz, Zirkel, Pausenfüller rundenweise: Runde 1: B1 · B2, Runde 2: … */
+function renderRounds(G,w,d,L){let h='';const ns=G.ex.map(e=>rx(e,w).n),max=Math.max(0,...ns);
+  G.ex.forEach(e=>{const R=rx(e,w),E=exLog(L,e.b);
+    h+='<details class="exd"><summary><span class="blk'+(e.b[0]==='E'?' reha':'')+'">'+esc(e.b)+'</span><span><h4>'+esc(e.n)+'</h4><small>'+esc(R.t)+(e.st?' · Start '+esc(e.st):'')+'</small></span><span class="chev">›</span></summary>'+
+      '<div class="exb">'+exInfo(e,w,d,L,false)+'<textarea class="note" id="note-'+ID(w,d)+'-'+esc(e.b)+'" data-note="'+esc(e.b)+'" rows="1" placeholder="Kommentar">'+esc(E.note)+'</textarea></div></details>'});
+  for(let i=0;i<max;i++){const inR=G.ex.filter((e,k)=>ns[k]>i);
+    const done=inR.every(e=>{const s=exLog(L,e.b).sets[i];return s&&s.d});
+    h+='<div class="round'+(done?' done':'')+'"><div class="rn"><span>Runde '+(i+1)+(i+1===max?' von '+max:'')+'</span><b>'+(done?'✓':'')+'</b></div>';
+    inR.forEach(e=>{if(e.format==='per_pause')h+='<div class="ph">in der Pause:</div>';
+      h+=rowHtml(e,w,d,L,i,esc(e.b)+(rx(e,w).top?'<small>Top</small>':''),i===0)});
+    h+='</div>'}
+  return h}
+/* #11: Tabata als Übung im Plan */
+function renderTabataEx(e,w,d,L){const t=e.tabata||{work:20,rest:10,rounds:8,sets:1,setRest:60,ex:[e.n]},E=exLog(L,e.b),n=t.rounds*t.sets;
+  const reps=[];for(let i=0;i<n;i++){const s=E.sets[i];reps.push(s&&s.r!==''&&s.r!=null?+s.r:null)}
+  const got=reps.filter(x=>x!=null);
+  let h='<div class="ex" data-ex="'+esc(e.b)+'">'+exInfo(e,w,d,L,true)+
+    '<div class="facts">'+(t.ex||[]).map((x,i)=>'<span class="fact">'+(t.ex.length>1?'R'+(i+1)+': ':'')+esc(x)+'</span>').join('')+'</div>'+
+    '<button type="button" class="go wide" data-act="tb-start" data-b="'+esc(e.b)+'">Tabata starten</button>'+
+    '<div class="tbres">';
+  for(let i=0;i<n;i++)h+='<label>'+(t.sets>1?'S'+(Math.floor(i/t.rounds)+1)+' ':'')+'R'+(i%t.rounds+1)+'<input data-tbr="'+esc(e.b)+'" data-i="'+i+'" inputmode="numeric" value="'+(reps[i]==null?'':reps[i])+'"></label>';
+  h+='</div><div class="tbsum">Summe <b>'+(got.length?got.reduce((a,b)=>a+b,0):'–')+'</b> · schwächste Runde <b>'+(got.length?Math.min(...got):'–')+'</b></div>'+
+    '<textarea class="note" id="note-'+ID(w,d)+'-'+esc(e.b)+'" data-note="'+esc(e.b)+'" rows="1" placeholder="Kommentar, Gewicht">'+esc(E.note)+'</textarea></div>';
+  return h}
+function markNext(scroll){const rows=[...document.querySelectorAll('#main .sr[data-b]')];rows.forEach(r=>r.classList.remove('next'));
+  const nx=rows.find(r=>!r.classList.contains('done'));if(!nx)return null;nx.classList.add('next');
+  if(scroll){const b=nx.getBoundingClientRect();if(b.top<120||b.bottom>innerHeight-110)nx.scrollIntoView({block:'center',behavior:'smooth'})}
+  return nx}
 
-/* ---------- rules ---------- */
-const md=t=>esc(t).replace(/\*\*(.+?)\*\*/g,'<b>$1</b>');
+/* ---------- Regeln, Pläne, Konto, Verwaltung ---------- */
 function renderRules(){
   const t=(rows,head)=>'<div class="tw"><table><thead><tr>'+head.map(x=>'<th>'+md(x)+'</th>').join('')+'</tr></thead><tbody>'+rows.map(r=>'<tr>'+r.map(x=>'<td>'+md(x)+'</td>').join('')+'</tr>').join('')+'</tbody></table></div>';
-  let dates=[];for(let w=1;w<=NW;w++)dates.push(['W'+w,...DAYS.map((_,d)=>{const x=shownDate(w,d);return wdOf(x)+' '+fmtD(x)+(isDone(w,d)?' ✓':'')})]);
+  const mark=(w,d)=>{const st=statusOf(logs[ID(w,d)]);return st==='fertig'?' ✓':st==='laeuft'?' ●':st==='abgebrochen'?' ✕':''};
+  let dates=[];for(let w=1;w<=NW;w++)dates.push(['W'+w,...DAYS.map((_,d)=>{const x=shownDate(w,d);return wdOf(x)+' '+fmtD(x)+mark(w,d)})]);
   const end=dateOf(NW,ND-1),st=dateOf(1,0);
-  const rl=sched.reha.length?'<div class="rlist">'+sched.reha.map(x=>{const p=x.split('-'),dt=new Date(+p[0],p[1]-1,+p[2]);
-    return '<div class="rrow"><span>'+wdOf(dt)+' '+fmtD(dt)+p[0]+'</span><button type="button" class="tbtn" data-act="unreha" data-v="'+x+'">zurücknehmen</button></div>'}).join('')+'</div>'
-    :'<p>Noch keine. In einer Einheit auf „Heute aussetzen“ tippen, dann rückt sie auf den nächsten Termin.</p>';
+  const rl=sched.reha.length?'<div class="rlist">'+sched.reha.map(x=>{const dt=fromIso(x);
+    return '<div class="rrow"><span>'+fmtDL(dt)+'</span><button type="button" class="tbtn" data-act="unreha" data-v="'+x+'">zurücknehmen</button></div>'}).join('')+'</div>'
+    :'<p>Noch keine. In einer Einheit „Einheit verschieben“ → „alle folgenden rücken weiter“ wählen.</p>';
+  const mvs=Object.entries(moves.map).filter(([,v])=>isIso(v));
+  const ml=mvs.length?'<div class="rlist">'+mvs.map(([k,v])=>{const m=/^w(\d+)d(\d)$/.exec(k);return '<div class="rrow"><span>W'+m[1]+' Tag '+m[2]+' → '+fmtDL(fromIso(v))+'</span><button type="button" class="tbtn" data-act="mv-undo" data-v="'+k+'">aufheben</button></div>'}).join('')+'</div>':'';
   const sec=r=>'<section class="box"><h3>'+md(r.title||'')+'</h3>'+(r.table?t(r.table.rows||[],r.table.head||[]):'')+
     (r.p||[]).map(x=>'<p>'+md(x)+'</p>').join('')+(r.ul&&r.ul.length?'<ul>'+r.ul.map(x=>'<li>'+md(x)+'</li>').join('')+'</ul>':'')+'</section>';
   return '<div class="rules">'+
   '<div class="meta"><div><span class="phase">'+esc(P.name)+' · '+fmtD(st)+'–'+fmtD(end)+end.getFullYear()+'</span><h2>Regeln & Wochenaufbau</h2></div>'+(P.intro?'<p>'+md(P.intro)+'</p>':'')+'</div>'+
   (P.rules||[]).map(sec).join('')+
   '<section class="box"><h3>Termine</h3>'+t(dates,['Woche',...DAYS.map((_,d)=>'Tag '+(d+1))])+'</section>'+
-  '<section class="box"><h3>Ausgefallene Termine</h3>'+rl+'</section>'+
-  planManager()+
-  '<section class="box"><h3>Konto</h3><p>Angemeldet als '+esc(ME.name)+' ('+esc(ME.email)+').</p>'+
-   '<div style="display:flex;gap:8px;flex-wrap:wrap"><a class="tbtn" href="/api/export" download>Daten exportieren</a><button type="button" class="tbtn" data-act="logout">Abmelden</button></div></section>'+
-  '</div>'}
-function renderMain(){const m=document.getElementById('main');m.innerHTML=S.view==='r'?renderRules():renderSession();refreshNav();if(S.view==='r')loadPlanList()}
+  '<section class="box"><h3>Ausgefallene und verschobene Termine</h3>'+rl+ml+'</section>'+
+  planManager()+(ME.role==='admin'?adminBox():'')+accountBox()+'</div>'}
+function accountBox(){return '<section class="box"><h3>Konto</h3><p>Angemeldet als '+esc(ME.name)+' ('+esc(ME.email)+')'+(ME.role==='admin'?' · Admin':'')+'.</p>'+
+   '<div style="display:flex;gap:8px;flex-wrap:wrap"><a class="tbtn" href="/api/export" download>Daten exportieren</a><button type="button" class="tbtn" data-act="logout">Abmelden</button></div>'+
+   '<p style="font-size:12px;color:var(--muted)">Slothly '+VERSION+'</p></section>'}
+function renderMain(){const m=document.getElementById('main');sessUIGuard();m.innerHTML=S.view==='r'?renderRules():renderSession();refreshNav();refreshRun();
+  if(S.view==='r'){loadPlanList();if(ME.role==='admin')loadUsers()}else markNext(false)}
+let lastView='';function sessUIGuard(){const k=S.view+ID(S.w,S.d);if(k!==lastView){sessUI=null;moveUI=false;lastView=k}}
 
-/* ---------- Pläne: Vorlage, Download, Hochladen mit Vorschau, Wechseln ---------- */
-let upPlan=null;
+/* Pläne: Vorlage, Download, Hochladen (neu oder ersetzen, #2), Zyklen */
+let upPlan=null,upCheck=null,PLANS=[];
 function planManager(){
   return '<section class="box pm"><h3>Pläne</h3>'+
-   '<p>Neuer Zyklus oder eigener Plan: Vorlage (oder den aktuellen Plan) herunterladen, ausfüllen lassen, z. B. von Claude anhand deines Plan-PDFs, und hier hochladen. Die Anleitung steht in der Datei.</p>'+
+   '<p>Neuer Zyklus oder eigener Plan: Vorlage (oder den aktuellen Plan) herunterladen, ausfüllen lassen, z. B. von Claude anhand deines Plan-PDFs, und hier hochladen. Die Anleitung steht in der Datei. Korrekturen am laufenden Plan: aktuellen Plan herunterladen, ändern, hochladen und „ersetzen“ wählen, die Einträge bleiben.</p>'+
    '<div class="acts"><a class="tbtn" href="/api/plan-template" download>Vorlage herunterladen</a>'+
    (P?'<a class="tbtn" href="/api/plan/download" download>Aktuellen Plan herunterladen</a>':'')+
    '<label class="tbtn up">Plan hochladen<input type="file" id="planfile" accept=".json,application/json"></label></div>'+
    '<div id="planprev"></div><div class="plist" id="plist"></div></section>'}
-let PLANS=[];
 const dmy=x=>{const p=x.split('-');return p[2]+'.'+p[1]+'.'+p[0]};
 function mondayIso(){const t=new Date();t.setHours(12,0,0,0);t.setDate(t.getDate()-((t.getDay()+6)%7));return iso(t)}
 async function loadPlanList(){const el=document.getElementById('plist');if(!el)return;
@@ -403,7 +669,6 @@ async function loadPlanList(){const el=document.getElementById('plist');if(!el)r
        '<button type="button" class="tbtn danger" data-act="pask" data-k="delete" data-v="'+esc(x.id)+'">Löschen</button></div>'+
        '<div class="pconf" data-for="'+esc(x.id)+'"></div></div>').join(''):''}
   catch(e){}}
-/* Zweistufig: Schritt 1 erklärt, was verloren geht (mit Export), Schritt 2 fragt endgültig. */
 function planConfirm(kind,id,step){
   document.querySelectorAll('.pconf').forEach(x=>x.innerHTML='');
   const x=PLANS.find(p=>p.id===id);if(!x)return;
@@ -411,123 +676,357 @@ function planConfirm(kind,id,step){
   const n=x.sessions,lost=n?'<b>'+n+' eingetragene Einheit'+(n===1?'':'en')+'</b>':'keine eingetragenen Einheiten';
   const exp='<a class="tbtn" href="/api/export" download>Vorher alle Daten exportieren</a>';
   const cancel='<button type="button" class="tbtn" data-act="pcancel">Abbrechen</button>';
-  if(kind==='delete'){
-    el.innerHTML=step===1
+  if(kind==='delete')el.innerHTML=step===1
      ?'<div class="rconf"><span><b>„'+esc(x.name)+'“ löschen?</b> Gelöscht werden der Plan und '+lost+'.'+(x.active&&PLANS.length>1?' Danach wird dein jüngster anderer Zyklus aktiv.':'')+'</span>'+
        '<div class="btns"><button type="button" class="go" data-act="pstep" data-k="delete" data-v="'+esc(id)+'">Weiter</button>'+cancel+exp+'</div></div>'
      :'<div class="rconf"><span><b>Wirklich endgültig löschen?</b> Das lässt sich nicht rückgängig machen.</span>'+
-       '<div class="btns"><button type="button" class="go" data-act="pdo" data-k="delete" data-v="'+esc(id)+'">Ja, „'+esc(x.name)+'“ endgültig löschen</button>'+cancel+'</div></div>'}
-  else{
-    el.innerHTML=step===1
-     ?'<div class="rconf"><span><b>„'+esc(x.name)+'“ neu starten?</b> Der Plan bleibt, aber '+lost+' und alle Ausfalltage werden gelöscht. Woche 1 beginnt am gewählten Tag.</span>'+
+       '<div class="btns"><button type="button" class="go" data-act="pdo" data-k="delete" data-v="'+esc(id)+'">Ja, „'+esc(x.name)+'“ endgültig löschen</button>'+cancel+'</div></div>';
+  else el.innerHTML=step===1
+     ?'<div class="rconf"><span><b>„'+esc(x.name)+'“ neu starten?</b> Der Plan bleibt, aber '+lost+', alle Ausfalltage und Verschiebungen werden gelöscht. Woche 1 beginnt am gewählten Tag.</span>'+
        '<label style="display:grid;gap:4px;font-size:13px">Neuer Start (Montag der ersten Woche)<input type="date" id="pstart" value="'+mondayIso()+'" style="height:40px;border:1px solid var(--line);border-radius:9px;padding:0 10px;background:var(--surface);font-size:16px"></label>'+
        '<div class="btns"><button type="button" class="go" data-act="pstep" data-k="restart" data-v="'+esc(id)+'">Weiter</button>'+cancel+exp+'</div></div>'
      :'<div class="rconf"><span><b>Wirklich neu starten?</b> '+(n?'Die '+n+' Einheit'+(n===1?'':'en')+' sind danach weg, das lässt sich nicht rückgängig machen. ':'')+'Neuer Start: <b>'+dmy(el.dataset.start)+'</b>.</span>'+
-       '<div class="btns"><button type="button" class="go" data-act="pdo" data-k="restart" data-v="'+esc(id)+'">Ja, endgültig neu starten</button>'+cancel+'</div></div>'}
+       '<div class="btns"><button type="button" class="go" data-act="pdo" data-k="restart" data-v="'+esc(id)+'">Ja, endgültig neu starten</button>'+cancel+'</div></div>';
   el.scrollIntoView({block:'nearest'})}
-async function planDo(kind,id,btn){btn.disabled=true;
-  const el=document.querySelector('.pconf[data-for="'+id+'"]');
+async function planDo(kind,id,btn){btn.disabled=true;const el=document.querySelector('.pconf[data-for="'+id+'"]');
   try{clearTimeout(saveT);if(P&&P.id!==id)await flush();
-    const r=kind==='delete'?await api('DELETE','/api/plans/'+id,{confirm:'loeschen'})
-                           :await api('POST','/api/plans/'+id+'/restart',{confirm:'neustart',start:el.dataset.start});
+    const r=kind==='delete'?await api('DELETE','/api/plans/'+id,{confirm:'loeschen'}):await api('POST','/api/plans/'+id+'/restart',{confirm:'neustart',start:el.dataset.start});
     if(!r.ok){const d=await r.json().catch(()=>({}));throw new Error(d.message||'Fehler '+r.status)}
-    if(P&&P.id===id)return dropAndReload();
-    location.reload()}
-  catch(e){if(e.message!=='401'){el.innerHTML='<div class="rconf"><span>'+esc(e.message)+'</span></div>'}btn.disabled=false}}
+    if(P&&P.id===id)return dropAndReload();location.reload()}
+  catch(e){if(e.message!=='401')el.innerHTML='<div class="rconf"><span>'+esc(e.message)+'</span></div>';btn.disabled=false}}
 function showPrev(h){const el=document.getElementById('planprev');if(el)el.innerHTML=h}
 async function checkUpload(file){
-  upPlan=null;showPrev('<div class="prev"><span class="muted">Prüfe '+esc(file.name)+' …</span></div>');
-  let plan;
-  try{plan=JSON.parse(await file.text())}
+  upPlan=null;upCheck=null;showPrev('<div class="prev"><span class="muted">Prüfe '+esc(file.name)+' …</span></div>');
+  let plan;try{plan=JSON.parse(await file.text())}
   catch(e){showPrev('<div class="prev"><h4 class="bad">Datei nicht lesbar</h4><p class="muted">Das ist kein gültiges JSON. Häufige Ursache: ein Komma zu viel oder zu wenig, oder Text um die Datei herum. '+esc(e.message)+'</p></div>');return}
-  try{const r=await api('POST','/api/plans/check',{plan});const d=await r.json();
+  try{const r=await api('POST','/api/plans/check',{plan,replaceId:P?P.id:undefined});const d=await r.json();
     if(!r.ok)throw new Error(d.message||r.status);
     const warn=d.warnings.length?'<div><b>Hinweise</b><ul>'+d.warnings.map(w=>'<li>'+esc(w)+'</li>').join('')+'</ul></div>':'';
     if(!d.ok){showPrev('<div class="prev"><h4 class="bad">'+d.errors.length+' Fehler, bitte in der Datei korrigieren</h4><ul class="bad">'+d.errors.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>'+warn+'</div>');return}
-    upPlan=plan;const s=d.summary;
+    upPlan=plan;upCheck=d;const s=d.summary,rp=d.replace;
+    let rep='';
+    if(P&&rp){if(!rp.possible)rep='<span class="muted">Ersetzen von „'+esc(P.name)+'“ geht nicht: '+esc(rp.errors.join(' '))+'</span>';
+      else rep=(rp.orphans.length?'<div class="bad"><b>Beim Ersetzen nicht mehr angezeigt</b> (Einträge zu Blöcken, die es im neuen Plan nicht gibt):<ul>'+rp.orphans.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>'+
+        '<label class="chk"><input type="checkbox" id="orphok"> Verstanden, trotzdem ersetzen</label></div>':'')+
+        '<button type="button" class="go" data-act="planreplace">„'+esc(P.name)+'“ ersetzen, Einträge behalten</button>'}
     showPrev('<div class="prev"><h4>'+esc(s.name)+(s.subtitle?' · '+esc(s.subtitle):'')+'</h4>'+
      '<span class="muted">'+s.start+' bis '+s.end+' · '+s.weeks+' Wochen · '+s.days.length+' Tage pro Woche</span>'+
-     s.days.map(t=>'<div><b>'+esc(t.weekday)+' · '+esc(t.title)+'</b><ul>'+t.exercises.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>').join('')+warn+
-     '<div class="acts"><button type="button" class="go" data-act="planok">Übernehmen und aktivieren</button><button type="button" class="tbtn" data-act="planno">Abbrechen</button></div>'+
-     (P?'<span class="muted">„'+esc(P.name)+'“ bleibt mit allen Einträgen erhalten und lässt sich hier wieder aktivieren.</span>':'')+'</div>')}
+     s.days.map(t=>'<div><b>'+esc(t.weekday)+' · '+esc(t.title)+'</b>'+(t.skill?' <span class="muted">Skill: '+esc(t.skill)+'</span>':'')+'<ul>'+t.exercises.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>').join('')+warn+
+     '<div class="acts"><button type="button" class="'+(P?'tbtn':'go')+'" data-act="planok">Als neuen Zyklus übernehmen</button>'+rep+'<button type="button" class="tbtn" data-act="planno">Abbrechen</button></div>'+
+     (P?'<span class="muted">Als neuer Zyklus bleibt „'+esc(P.name)+'“ mit allen Einträgen erhalten und lässt sich wieder aktivieren. Ersetzen behält die Einträge im laufenden Plan.</span>':'')+'</div>')}
   catch(e){if(e.message!=='401')showPrev('<div class="prev"><h4 class="bad">Prüfung fehlgeschlagen</h4><p class="muted">'+esc(e.message)+'</p></div>')}}
 async function savePlanSwitch(fn){clearTimeout(saveT);await flush();await fn();location.reload()}
 
-/* ---------- interactions ---------- */
+/* #3 Verwaltung */
+let USERS=[],userUI={};
+function adminBox(){return '<section class="box adm" id="admbox"><h3>Benutzer</h3><div id="ulist"><span class="muted">lädt…</span></div>'+
+  '<details><summary class="tbtn" style="display:inline-block">Konto anlegen</summary><div class="aform" style="margin-top:10px">'+
+  '<label>Name<input id="na-name" maxlength="80"></label><label>E-Mail<input id="na-mail" type="email" inputmode="email" autocapitalize="off"></label>'+
+  '<label>Rolle<select id="na-role"><option value="user">Nutzer</option><option value="admin">Admin</option></select></label>'+
+  '<label class="chk" style="align-self:end"><input type="checkbox" id="na-inv" checked> Einladung per Mail</label>'+
+  '<div class="full"><button type="button" class="go" data-act="u-add">Anlegen</button> <span class="msg" id="na-msg"></span></div></div></details></section>'}
+const ago=t=>{if(!t)return '–';const s=(Date.now()-new Date(t))/1000;return s<3600?Math.max(1,Math.round(s/60))+' min':s<86400?Math.round(s/3600)+' h':Math.round(s/86400)+' Tg.'};
+async function loadUsers(){const el=document.getElementById('ulist');if(!el)return;
+  try{const r=await api('GET','/api/admin/users');if(!r.ok)throw new Error((await r.json()).message);USERS=(await r.json()).users;renderUsers()}
+  catch(e){if(e.message!=='401')el.innerHTML='<span class="msg err">'+esc(e.message)+'</span>'}}
+function renderUsers(){const el=document.getElementById('ulist');if(!el)return;
+  el.innerHTML=USERS.map(u=>{const ui=userUI[u.id]||{};
+    const code=u.last_code_at?'Letzter Code vor '+ago(u.last_code_at)+' · '+(u.last_code_used?'benutzt':u.last_code_mail==='gesendet'?'Mail verschickt':u.last_code_mail==='fehler'?'Mail fehlgeschlagen':u.last_code_mail==='admin'?'von Admin erzeugt':'offen'):'Noch kein Code angefordert';
+    let h='<div class="urow"><div class="uh"><span><b>'+esc(u.name)+'</b> '+(u.role==='admin'?'<span class="badge ok">Admin</span>':'')+(u.disabled?' <span class="badge ab">gesperrt</span>':'')+'<br><small>'+esc(u.email)+'</small></span>'+
+      '<small>zuletzt aktiv vor '+ago(u.last_seen)+' · '+u.devices+' Gerät'+(u.devices===1?'':'e')+(u.plan?' · Plan: '+esc(u.plan):'')+'</small></div>'+
+      '<small>'+code+'</small>';
+    if(ui.code)h+='<div class="finbox"><span>Anmelde-Code für '+esc(u.name)+', '+ui.code.minutes+' min gültig. In der App nach „Code schicken“ eintippen:</span><span class="codebig">'+esc(ui.code.code)+'</span></div>';
+    if(ui.edit)h+='<div class="uedit"><input id="ue-name-'+u.id+'" value="'+esc(u.name)+'" aria-label="Name"><input id="ue-mail-'+u.id+'" value="'+esc(u.email)+'" type="email" aria-label="E-Mail"><div class="acts"><button type="button" class="go" data-act="u-save" data-v="'+u.id+'">Speichern</button><button type="button" class="tbtn" data-act="u-ui" data-k="edit" data-v="'+u.id+'">Abbrechen</button></div></div>';
+    if(ui.confirm)h+='<div class="rconf"><span>'+(ui.confirm==='lock'?'„'+esc(u.name)+'“ sperren? Alle Geräte werden abgemeldet.':'„'+esc(u.name)+'“ auf allen Geräten abmelden?')+'</span><div class="btns"><button type="button" class="go" data-act="u-do" data-k="'+ui.confirm+'" data-v="'+u.id+'">Ja</button><button type="button" class="tbtn" data-act="u-ui" data-k="confirm" data-v="'+u.id+'">Abbrechen</button></div></div>';
+    if(ui.msg)h+='<span class="msg '+(ui.err?'err':'ok')+'">'+esc(ui.msg)+'</span>';
+    h+='<div class="acts"><button type="button" class="tbtn" data-act="u-code" data-v="'+u.id+'"'+(u.disabled?' disabled':'')+'>Code erzeugen</button>'+
+      '<button type="button" class="tbtn" data-act="u-role" data-v="'+u.id+'">'+(u.role==='admin'?'Zum Nutzer machen':'Zum Admin machen')+'</button>'+
+      (u.disabled?'<button type="button" class="tbtn" data-act="u-do" data-k="unlock" data-v="'+u.id+'">Entsperren</button>':'<button type="button" class="tbtn danger" data-act="u-ui" data-k="confirm" data-x="lock" data-v="'+u.id+'">Sperren</button>')+
+      '<button type="button" class="tbtn" data-act="u-ui" data-k="confirm" data-x="logout" data-v="'+u.id+'">Geräte abmelden</button>'+
+      '<button type="button" class="tbtn" data-act="u-ui" data-k="edit" data-v="'+u.id+'">Bearbeiten</button></div></div>';
+    return h}).join('')}
+async function adminCall(id,method,url,body){const u=userUI[id]=userUI[id]||{};
+  try{const r=await api(method,url,body);const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.message||'Fehler '+r.status);return d}
+  catch(e){if(e.message!=='401'){u.msg=e.message;u.err=true;renderUsers()}throw e}}
+
+/* ---------- Uhr: Pause, Stoppuhr, Timer, Tabata (#7, #9, #11) ---------- */
+let CLK=null,actx=null,wake=null,clkInt=null,sheetTab='stopwatch',sheetOpen=false;
+const TM=document.getElementById('timer');
+function primeAudio(){try{if(!actx){const A=window.AudioContext||window.webkitAudioContext;if(A)actx=new A()}if(actx&&actx.state==='suspended')actx.resume()}catch(e){}}
+function tone(f,dur,at){try{if(!actx)return;const os=actx.createOscillator(),g=actx.createGain();os.frequency.value=f;g.gain.value=.16;os.connect(g);g.connect(actx.destination);os.start(actx.currentTime+(at||0));os.stop(actx.currentTime+(at||0)+dur)}catch(e){}}
+function beep(kind){if(kind==='tick')tone(660,.09);else if(kind==='go'){tone(988,.35)}else{[0,.25,.5].forEach(o=>tone(880,.15,o))}
+  try{navigator.vibrate&&navigator.vibrate(kind==='tick'?60:[200,100,200])}catch(e){}}
+async function lock(){try{if(!wake&&navigator.wakeLock){wake=await navigator.wakeLock.request('screen');wake.addEventListener('release',()=>{wake=null})}}catch(e){wake=null}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&CLK)lock()});
+const now=()=>Date.now();
+/* Laufzeit aus Startzeitpunkt rechnen (stimmt nach Bildschirmsperre) */
+function elapsed(c){return ((c.paused?c.pausedAt:now())-c.start-c.pauseAcc)/1000}
+function left(c){return c.dur-elapsed(c)}
+function clkSet(o){CLK=Object.assign({start:now(),pauseAcc:0,paused:false,pausedAt:0,beeps:{},laps:[]},o);lock();if(!clkInt)clkInt=setInterval(clkTick,200);clkTick()}
+function clkStop(){CLK=null;TM.hidden=true;TM.className='timer';renderSheet();clearInterval(clkInt);clkInt=null}
+function clkPause(){if(!CLK||CLK.paused)return;CLK.paused=true;CLK.pausedAt=now();clkTick()}
+function clkResume(){if(!CLK||!CLK.paused)return;CLK.pauseAcc+=now()-CLK.pausedAt;CLK.paused=false;clkTick()}
+function clkTick(){const c=CLK;if(!c){TM.hidden=true;return}
+  if(c.kind==='tabata'){tabataTick();return}
+  let txt,frac=0,over=false;
+  if(c.kind==='stopwatch'||c.kind==='next'){txt=fmtClock(elapsed(c))}
+  else{const l=left(c);frac=1-l/c.dur;
+    if(!c.paused){[3,2,1].forEach(k=>{if(l<=k&&l>k-1&&!c.beeps['t'+k]){c.beeps['t'+k]=1;beep('tick')}});if(l<=0&&!c.beeps.end){c.beeps.end=1;beep('end');clkEnded(c)}}
+    over=l<=0;txt=(over?'+':'')+fmtClock(Math.abs(l))}
+  TM.hidden=false;TM.className='timer'+(over?' over':'')+(c.kind==='next'?' next':'');
+  document.getElementById('tt').textContent=txt;
+  document.getElementById('tl').textContent=c.label||'';
+  document.getElementById('ts').textContent=over&&c.overSub?c.overSub:(c.sub||'');
+  document.getElementById('tbar').style.width=Math.max(0,Math.min(100,frac*100))+'%';
+  const btn=(a,t)=>'<button type="button" data-tact="'+a+'">'+t+'</button>';
+  let b='';
+  if(c.kind==='pause'||c.kind==='timer')b=(over?'':btn('m15','−15'))+btn('p15','+15')+btn('stop','Fertig');
+  else if(c.kind==='stopwatch')b=c.bind?btn('take','Stopp · eintragen'):btn(c.paused?'resume':'pause',c.paused?'Weiter':'Stopp')+btn('stop','×');
+  else if(c.kind==='next')b=btn('stop','×');
+  const tb=document.getElementById('tbs');if(tb.dataset.h!==b){tb.innerHTML=b;tb.dataset.h=b}
+  if(sheetOpen)updateSheet()}
+function clkEnded(c){if(c.bind&&c.kind==='timer'){/* Wdh. in fester Zeit: Zeit um, Wdh. eintragen */const inp=document.querySelector('#main input[data-b="'+cssEsc(c.bind.b)+'"][data-i="'+c.bind.i+'"][data-k="r"]');if(inp)inp.closest('.sr').classList.add('next')}}
+const cssEsc=s=>String(s).replace(/["\\]/g,'\\$&');
+TM.addEventListener('click',ev=>{const a=ev.target.closest('[data-tact]');if(!a||!CLK)return;primeAudio();const k=a.dataset.tact,c=CLK;
+  if(k==='open')openSheet(c.kind==='stopwatch'?'stopwatch':c.kind==='tabata'?'tabata':'timer');
+  else if(k==='stop')clkStop();
+  else if(k==='p15'){c.dur+=15;c.beeps={};clkTick()}
+  else if(k==='m15'){c.dur=Math.max(1,c.dur-15);clkTick()}
+  else if(k==='pause')clkPause();else if(k==='resume')clkResume();
+  else if(k==='take')takeStopwatch()});
+/* Stoppuhr an einer Satzzeile: Zeit ins Feld schreiben */
+function takeStopwatch(){const c=CLK;if(!c||!c.bind)return;const sec=Math.round(elapsed(c)),{id,b,i}=c.bind,L=getLog(id),E=exLog(L,b);
+  const s=E.sets[i]=E.sets[i]||{};s.t=String(sec);touch(id);clkStop();
+  const inp=document.querySelector('#main input[data-b="'+cssEsc(b)+'"][data-i="'+i+'"][data-k="t"]');if(inp)inp.value=s.t;toast(sec+' s eingetragen')}
+/* #7: Pause nach dem Abhaken. Supersatz/Zirkel: erst nach der letzten Übung der Runde, dazwischen „weiter: B2“. */
+function afterTick(e,i){const D=DAYS[S.d],G=groupsOf(D).find(g=>g.ex.includes(e)),w=S.w,L=getLog(ID(S.w,S.d));
+  const nx=markNext(true),nxt=nx?nx.dataset.lbl:'';
+  if(e.format==='per_pause')return;   // Pausenfüller läuft in der laufenden Pause
+  const main=G.ex.filter(x=>x.format!=='per_pause'&&x.format!=='tabata'&&rx(x,w).n>i);
+  if(main.length>1){const open=main.filter(x=>{const s=exLog(L,x.b).sets[i];return !(s&&s.d)});
+    if(open.length){if(CLK&&(CLK.kind==='pause'||CLK.kind==='timer')&&left(CLK)>0)return;   // laufende Pause nicht wegnehmen
+      clkSet({kind:'next',label:'Weiter: '+open[0].b+' · '+open[0].n,sub:'ohne Pause · Runde '+(i+1)});return}
+    const ps=Math.max(0,...main.map(x=>x.ps||0));
+    if(ps)clkSet({kind:'pause',dur:ps,label:'Pause · Runde '+(i+1)+' '+G.g+' fertig',sub:nxt?'Danach: '+nxt:'',overSub:nxt?'Los: '+nxt:'Weiter'});
+    else if(CLK&&CLK.kind==='next')clkStop();
+    return}
+  if(e.ps)clkSet({kind:'pause',dur:e.ps,label:'Pause · '+e.b+' '+e.n,sub:nxt?'Danach: '+nxt:'',overSub:nxt?'Los: '+nxt:'Weiter'});
+  else if(CLK&&CLK.kind==='next')clkStop()}
+/* Fenster mit Stoppuhr, Timer, Tabata (#9, #11) */
+const OV=document.getElementById('overlay');
+function openSheet(tab){sheetTab=tab||sheetTab;sheetOpen=true;renderSheet()}
+function closeSheet(){sheetOpen=false;renderSheet()}
+document.getElementById('clockbtn').addEventListener('click',()=>{primeAudio();openSheet(CLK&&CLK.kind==='stopwatch'?'stopwatch':CLK&&(CLK.kind==='timer'||CLK.kind==='pause')?'timer':sheetTab)});
+let tbCfg={work:20,rest:10,rounds:8,sets:1,setRest:60};try{Object.assign(tbCfg,JSON.parse(localStorage.getItem('slothly-tabata')||'{}'))}catch(e){}
+function renderSheet(){if(TB){renderTabata();return}
+  if(!sheetOpen){OV.innerHTML='';return}
+  const tab=(k,t)=>'<button type="button" class="'+(sheetTab===k?'on':'')+'" data-sact="tab" data-v="'+k+'">'+t+'</button>';
+  let h='<div class="scrim" data-sact="close"></div><div class="sheet" role="dialog" aria-label="Uhr"><h3>Uhr <button type="button" class="tbtn" data-sact="close">Schließen</button></h3>'+
+    '<div class="tabs">'+tab('stopwatch','Stoppuhr')+tab('timer','Timer')+tab('tabata','Tabata')+'</div><div id="sheetbody">';
+  if(sheetTab==='stopwatch'){const run=CLK&&CLK.kind==='stopwatch';
+    h+='<div class="big" id="sbig">'+(run?fmtClock(elapsed(CLK)):'0:00')+'</div><div class="qrow">'+
+      (run?(CLK.paused?'<button type="button" class="go" data-sact="sw-resume">Weiter</button>':'<button type="button" class="go" data-sact="sw-pause">Stopp</button>')+'<button type="button" data-sact="sw-lap"'+(CLK.paused?' disabled':'')+'>Runde</button><button type="button" data-sact="sw-reset">Zurücksetzen</button>':'<button type="button" class="go" data-sact="sw-start">Start</button>')+
+      '</div><div class="laps" id="laps">'+(run?lapsHtml():'')+'</div>'}
+  else if(sheetTab==='timer'){const run=CLK&&(CLK.kind==='timer'||CLK.kind==='pause');
+    h+='<div class="big" id="sbig">'+(run?fmtClock(Math.abs(left(CLK))):'1:00')+'</div>'+
+      '<div class="qrow">'+[30,60,90,120,180].map(s=>'<button type="button" data-sact="t-q" data-v="'+s+'">'+(s<60?s+' s':s%60?fmtClock(s):s/60+' min')+'</button>').join('')+'</div>'+
+      '<div class="qrow"><input id="tcustom" inputmode="numeric" placeholder="mm:ss" style="width:110px;height:44px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font-size:17px;background:var(--surface2)"><button type="button" data-sact="t-custom">Start</button></div>'+
+      (run?'<div class="qrow"><button type="button" data-sact="t-m15">−15 s</button><button type="button" data-sact="t-p15">+15 s</button>'+(CLK.paused?'<button type="button" class="go" data-sact="t-resume">Weiter</button>':'<button type="button" data-sact="t-pause">Pause</button>')+'<button type="button" data-sact="t-reset">Stopp</button></div>':'')}
+  else{h+='<div class="cfg">'+[['work','Arbeit (s)'],['rest','Pause (s)'],['rounds','Runden'],['sets','Sätze'],['setRest','Satzpause (s)']].map(([k,t])=>'<label>'+t+'<input data-tcfg="'+k+'" inputmode="numeric" value="'+tbCfg[k]+'"></label>').join('')+'</div>'+
+      '<p style="margin:0;font-size:13px;color:var(--muted)">Standard 20 s Arbeit, 10 s Pause, 8 Runden (4 min), 10 s Vorlauf. In den Pausen trägst du die Wiederholungen der Runde ein.</p>'+
+      '<div class="qrow"><button type="button" class="go" data-sact="tb-free">Tabata starten</button></div>'}
+  OV.innerHTML=h+'</div></div>'}
+function lapsHtml(){const c=CLK;if(!c||!c.laps.length)return '';let prev=0;return c.laps.map((t,i)=>{const d=t-prev;prev=t;return '<div><span>Runde '+(i+1)+'</span><span>'+fmtClock(d)+' · '+fmtClock(t)+'</span></div>'}).reverse().join('')}
+function updateSheet(){const b=document.getElementById('sbig');if(!b||!CLK)return;
+  if(sheetTab==='stopwatch'&&CLK.kind==='stopwatch')b.textContent=fmtClock(elapsed(CLK));
+  else if(sheetTab==='timer'&&(CLK.kind==='timer'||CLK.kind==='pause'))b.textContent=(left(CLK)<0?'+':'')+fmtClock(Math.abs(left(CLK)))}
+function parseMmSs(v){const m=String(v||'').trim().match(/^(\d+)(?::(\d{1,2}))?$/);if(!m)return 0;return m[2]!==undefined?+m[1]*60+ +m[2]:+m[1]}
+OV.addEventListener('click',ev=>{const a=ev.target.closest('[data-sact],[data-tbact]');if(!a)return;primeAudio();
+  if(a.dataset.tbact){tabataAction(a.dataset.tbact,a);return}
+  const k=a.dataset.sact;
+  if(k==='close')return closeSheet();
+  if(k==='tab'){sheetTab=a.dataset.v;return renderSheet()}
+  if(k==='sw-start')clkSet({kind:'stopwatch',label:'Stoppuhr'});
+  else if(k==='sw-pause')clkPause();else if(k==='sw-resume')clkResume();
+  else if(k==='sw-lap'&&CLK){CLK.laps.push(elapsed(CLK))}
+  else if(k==='sw-reset')clkStop();
+  else if(k==='t-q')clkSet({kind:'timer',dur:+a.dataset.v,label:'Timer '+fmtClock(+a.dataset.v)});
+  else if(k==='t-custom'){const s=parseMmSs(document.getElementById('tcustom').value);if(s)clkSet({kind:'timer',dur:s,label:'Timer '+fmtClock(s)})}
+  else if(k==='t-p15'&&CLK){CLK.dur+=15;CLK.beeps={}}else if(k==='t-m15'&&CLK){CLK.dur=Math.max(1,CLK.dur-15)}
+  else if(k==='t-pause')clkPause();else if(k==='t-resume')clkResume();else if(k==='t-reset')clkStop();
+  else if(k==='tb-free'){readTbCfg();startTabata(Object.assign({ex:['Tabata']},tbCfg),null)}
+  renderSheet()});
+OV.addEventListener('input',ev=>{const t=ev.target;if(t.dataset.tbrep!==undefined&&TB){const v=t.value.trim();TB.reps[+t.dataset.tbrep]=v===''?null:Math.max(0,parseInt(v,10)||0);saveTabata(false)}});
+function readTbCfg(){document.querySelectorAll('[data-tcfg]').forEach(i=>{const v=parseInt(i.value,10);if(v>=0)tbCfg[i.dataset.tcfg]=v});
+  tbCfg.work=Math.min(600,Math.max(5,tbCfg.work));tbCfg.rounds=Math.min(50,Math.max(1,tbCfg.rounds));tbCfg.sets=Math.min(10,Math.max(1,tbCfg.sets));store('slothly-tabata',tbCfg)}
+
+/* Tabata: Phasen vorab berechnen, aktuelle Phase aus der Laufzeit (#11) */
+let TB=null;
+function startTabata(cfg,bind){const ph=[{k:'pre',d:10}];
+  for(let s=0;s<cfg.sets;s++){for(let r=0;r<cfg.rounds;r++){const idx=s*cfg.rounds+r;ph.push({k:'work',d:cfg.work,idx,s,r,ex:cfg.ex[r%cfg.ex.length]});
+      if(r<cfg.rounds-1&&cfg.rest)ph.push({k:'rest',d:cfg.rest,idx,s,r});}
+    if(s<cfg.sets-1&&cfg.setRest)ph.push({k:'setrest',d:cfg.setRest,idx:s*cfg.rounds+cfg.rounds-1,s})}
+  let t=0;ph.forEach(p=>{p.at=t;t+=p.d});
+  const reps=new Array(cfg.rounds*cfg.sets).fill(null);
+  if(bind){const E=exLog(getLog(bind.id),bind.b);E.sets.forEach((s,i)=>{if(s&&s.r!=null&&s.r!=='')reps[i]=+s.r})}
+  TB={cfg,ph,total:t,reps,bind,done:false};sheetOpen=false;clkSet({kind:'tabata'});renderTabata()}
+function tbPhase(){const t=elapsed(CLK);let cur=TB.ph[TB.ph.length-1];for(const p of TB.ph){if(t<p.at+p.d){cur=p;break}}return{p:cur,t,left:cur.at+cur.d-t,end:t>=TB.total}}
+function tabataTick(){if(!TB)return;const st=tbPhase();
+  if(!CLK.paused){const k=st.p.at;
+    if(st.end&&!TB.done){TB.done=true;beep('end');saveTabata(true);renderTabata();return}
+    if(!st.end){[3,2,1].forEach(n=>{if(st.left<=n&&st.left>n-1&&!CLK.beeps[k+'_'+n]){CLK.beeps[k+'_'+n]=1;beep('tick')}});
+      if(!CLK.beeps['s'+k]){CLK.beeps['s'+k]=1;if(st.p.k==='work')beep('go');else if(st.p.k!=='pre')beep('end');if(TB.lastPh!==k){TB.lastPh=k;renderTabata();return}}}}
+  const n=document.getElementById('tbnum');if(n)n.textContent=TB.done?'✓':String(Math.ceil(Math.max(0,st.left)));
+  TM.hidden=false;TM.className='timer';document.getElementById('tt').textContent=TB.done?'fertig':String(Math.ceil(Math.max(0,st.left)));
+  document.getElementById('tl').textContent='Tabata · '+(TB.done?'fertig':phName(st.p.k));document.getElementById('ts').textContent='';
+  const tb=document.getElementById('tbs');if(tb.dataset.h!=='tb'){tb.innerHTML='';tb.dataset.h='tb'}}
+const phName=k=>({pre:'Gleich geht’s los',work:'Arbeit',rest:'Pause',setrest:'Satzpause'}[k]||'');
+function renderTabata(){if(!TB){OV.innerHTML='';return}const st=tbPhase(),c=TB.cfg,p=st.p;
+  if(TB.done){const got=TB.reps.filter(x=>x!=null);
+    OV.innerHTML='<div class="tbt"><div class="hd"><span>Tabata '+c.work+'/'+c.rest+' × '+c.rounds+(c.sets>1?' × '+c.sets:'')+'</span><span></span></div>'+
+      '<div class="mid"><div class="ph">Fertig</div><div class="sum"><div>Summe <b>'+(got.length?got.reduce((a,b)=>a+b,0):'–')+'</b> · schwächste Runde <b>'+(got.length?Math.min(...got):'–')+'</b></div>'+
+      '<div class="tbres">'+TB.reps.map((r,i)=>'<label>'+(c.sets>1?'S'+(Math.floor(i/c.rounds)+1)+' ':'')+'R'+(i%c.rounds+1)+'<input data-tbrep="'+i+'" inputmode="numeric" value="'+(r==null?'':r)+'"></label>').join('')+'</div>'+
+      (TB.bind?'<span style="font-size:14px;opacity:.85">Gespeichert in der Einheit.</span>':'')+'</div></div>'+
+      '<div class="foot"><button type="button" data-tbact="close">Schließen</button></div></div>';return}
+  const repIdx=p.k==='work'?p.idx-1:p.idx;   // in der Pause: Runde, die gerade vorbei ist
+  const nextWork=TB.ph.find(x=>x.at>p.at&&x.k==='work');
+  const rn=p.k==='pre'?1:(p.r??c.rounds-1)+1,sn=p.k==='pre'?1:(p.s??0)+1;
+  OV.innerHTML='<div class="tbt '+p.k+'"><div class="hd"><span>Runde '+rn+'/'+c.rounds+(c.sets>1?' · Satz '+sn+'/'+c.sets:'')+'</span><span>'+fmtClock(TB.total-st.t)+' gesamt</span></div>'+
+    '<div class="mid"><div class="ph">'+phName(p.k)+'</div><div class="num" id="tbnum">'+Math.ceil(Math.max(0,st.left))+'</div>'+
+    (p.k==='work'?'<div class="ex">'+esc(p.ex)+'</div>':nextWork?'<div class="nx">Als Nächstes: '+esc(nextWork.ex)+'</div>':'')+
+    (repIdx>=0&&p.k!=='pre'?'<div class="reps"><span>Wiederholungen Runde '+(repIdx%c.rounds+1)+(c.sets>1?' (Satz '+(Math.floor(repIdx/c.rounds)+1)+')':'')+'</span><div class="rr"><button type="button" data-tbact="minus" data-v="'+repIdx+'">−</button><b id="tbrv">'+(TB.reps[repIdx]==null?0:TB.reps[repIdx])+'</b><button type="button" data-tbact="plus" data-v="'+repIdx+'">+</button></div></div>':'')+
+    '</div><div class="foot">'+(CLK.paused?'<button type="button" data-tbact="resume">Weiter</button>':'<button type="button" data-tbact="pause">Pause</button>')+
+    (TB.confirmStop?'<button type="button" data-tbact="stop-ok">Wirklich abbrechen</button><button type="button" data-tbact="stop-no">Nein</button>':'<button type="button" data-tbact="stop">Abbrechen</button>')+'</div></div>'}
+function tabataAction(k,a){if(!TB)return;
+  if(k==='plus'||k==='minus'){const i=+a.dataset.v;TB.reps[i]=Math.max(0,(TB.reps[i]||0)+(k==='plus'?1:-1));const el=document.getElementById('tbrv');if(el)el.textContent=TB.reps[i];saveTabata(false);return}
+  if(k==='pause'){clkPause();renderTabata()}else if(k==='resume'){clkResume();renderTabata()}
+  else if(k==='stop'){TB.confirmStop=true;renderTabata()}else if(k==='stop-no'){TB.confirmStop=false;renderTabata()}
+  else if(k==='stop-ok'||k==='close'){if(k==='stop-ok')saveTabata(true);TB=null;clkStop();OV.innerHTML='';if(S.view==='s')renderMain()}}
+/* Ergebnis in die Einheit schreiben (nur bei Tabata aus dem Plan) */
+function saveTabata(final){if(!TB||!TB.bind)return;const {id,b}=TB.bind,L=getLog(id),E=exLog(L,b);
+  if(statusOf(L)==='offen'){startSession(L,CLK?CLK.start:Date.now())}
+  TB.reps.forEach((r,i)=>{const s=E.sets[i]=E.sets[i]||{};if(r==null){delete s.r;delete s.d}else{s.r=String(r);s.d=true;s.at=s.at||Date.now()}});
+  touch(id)}
+
+/* ---------- Eingaben ---------- */
 const main=document.getElementById('main');
-main.addEventListener('change',ev=>{if(ev.target.id==='planfile'&&ev.target.files[0])checkUpload(ev.target.files[0])});
-main.addEventListener('click',ev=>{const b=ev.target.closest('[data-act]');if(!b)return;primeAudio();
-  const a=b.dataset.act;
+let toastT=null;function toast(t){const el=document.getElementById('toast');el.textContent=t;el.hidden=false;clearTimeout(toastT);toastT=setTimeout(()=>{el.hidden=true},2500)}
+/* Uhr bei offener Tastatur oben andocken (#7) */
+document.addEventListener('focusin',ev=>{if(ev.target.matches('input,textarea'))document.body.classList.add('kb')});
+document.addEventListener('focusout',()=>{setTimeout(()=>{if(!document.activeElement||!document.activeElement.matches('input,textarea'))document.body.classList.remove('kb')},50)});
+main.addEventListener('change',ev=>{const t=ev.target;
+  if(t.id==='planfile'&&t.files[0])checkUpload(t.files[0]);
+  else if(t.dataset&&t.dataset.done)t.dispatchEvent(new Event('input',{bubbles:true}));
+  else if(t.id==='mvd')moveWarn();
+  else if(t.name==='mvk'){const one=t.value==='one';document.getElementById('mvdate').style.opacity=one?1:.4}});
+main.addEventListener('click',async ev=>{const b=ev.target.closest('[data-act]');if(!b)return;primeAudio();
+  const a=b.dataset.act,id=ID(S.w,S.d);
+  /* Pläne */
   if(a==='planno'){upPlan=null;showPrev('');const f=document.getElementById('planfile');if(f)f.value='';return}
-  if(a==='planok'&&upPlan){b.disabled=true;savePlanSwitch(async()=>{const r=await api('POST','/api/plans',{plan:upPlan});if(!r.ok){const d=await r.json().catch(()=>({}));alert(d.message||'Speichern fehlgeschlagen');throw new Error('x')}}).catch(()=>{b.disabled=false});return}
+  if(a==='planok'&&upPlan){b.disabled=true;savePlanSwitch(async()=>{const r=await api('POST','/api/plans',{plan:upPlan});if(!r.ok){const d=await r.json().catch(()=>({}));toast(d.message||'Speichern fehlgeschlagen');throw new Error('x')}}).catch(()=>{b.disabled=false});return}
+  if(a==='planreplace'&&upPlan&&P){const ok=document.getElementById('orphok');if(ok&&!ok.checked){toast('Bitte erst bestätigen, dass die Einträge wegfallen dürfen');return}
+    b.disabled=true;savePlanSwitch(async()=>{const r=await api('PUT','/api/plans/'+P.id,{plan:upPlan,force:!!ok});if(!r.ok){const d=await r.json().catch(()=>({}));toast(d.message||'Ersetzen fehlgeschlagen');throw new Error('x')}try{localStorage.removeItem('slothly-plan')}catch(e){}}).catch(()=>{b.disabled=false});return}
   if(a==='pask'){planConfirm(b.dataset.k,b.dataset.v,1);return}
   if(a==='pstep'){const el=document.querySelector('.pconf[data-for="'+b.dataset.v+'"]');
-    if(b.dataset.k==='restart'){const v=document.getElementById('pstart').value;if(!/^\d{4}-\d{2}-\d{2}$/.test(v))return;el.dataset.start=v}
-    planConfirm(b.dataset.k,b.dataset.v,2);if(b.dataset.k==='restart')el.dataset.start=el.dataset.start||'';return}
+    if(b.dataset.k==='restart'){const v=document.getElementById('pstart').value;if(!isIso(v))return;el.dataset.start=v}
+    planConfirm(b.dataset.k,b.dataset.v,2);return}
   if(a==='pdo'){planDo(b.dataset.k,b.dataset.v,b);return}
   if(a==='pcancel'){document.querySelectorAll('.pconf').forEach(x=>x.innerHTML='');return}
   if(a==='activate'){b.disabled=true;savePlanSwitch(()=>api('POST','/api/plans/'+b.dataset.v+'/activate',{})).catch(()=>{b.disabled=false});return}
-  if(a==='logout'){api('POST','/api/logout',{}).finally(()=>{try{localStorage.removeItem(LKEY);localStorage.removeItem(SKEY)}catch(e){}location.href='/login'});return}
-  if(a==='reha'||a==='rehano'){document.getElementById('rehabox').innerHTML=rehaBox(a==='reha');return}
-  if(a==='rehaok'){const ds=iso(dateOf(S.w,S.d));if(!sched.reha.includes(ds)){sched.reha.push(ds);sched.reha.sort()}touchSched();return}
+  if(a==='logout'){api('POST','/api/logout',{}).finally(()=>{try{localStorage.clear()}catch(e){}location.href='/login'});return}
+  /* Verwaltung */
+  if(a.startsWith('u-')){const uid=b.dataset.v,ui=userUI[uid]=userUI[uid]||{};ui.msg='';
+    try{
+      if(a==='u-ui'){const k=b.dataset.k;if(k==='confirm')ui.confirm=ui.confirm?null:b.dataset.x;else ui[k]=!ui[k];renderUsers();return}
+      if(a==='u-code'){const d=await adminCall(uid,'POST','/api/admin/users/'+uid+'/login-code',{});ui.code=d;await loadUsers();return}
+      if(a==='u-role'){const u=USERS.find(x=>x.id===uid);await adminCall(uid,'PATCH','/api/admin/users/'+uid,{role:u.role==='admin'?'user':'admin'});ui.msg='Rolle geändert';ui.err=false;await loadUsers();return}
+      if(a==='u-do'){const k=b.dataset.k;ui.confirm=null;
+        if(k==='lock')await adminCall(uid,'PATCH','/api/admin/users/'+uid,{disabled:true});
+        else if(k==='unlock')await adminCall(uid,'PATCH','/api/admin/users/'+uid,{disabled:false});
+        else if(k==='logout'){const d=await adminCall(uid,'POST','/api/admin/users/'+uid+'/logout-all',{});ui.msg=d.n+' Gerät'+(d.n===1?'':'e')+' abgemeldet';ui.err=false}
+        await loadUsers();return}
+      if(a==='u-save'){await adminCall(uid,'PATCH','/api/admin/users/'+uid,{name:document.getElementById('ue-name-'+uid).value,email:document.getElementById('ue-mail-'+uid).value});ui.edit=false;ui.msg='Gespeichert';ui.err=false;await loadUsers();return}
+      if(a==='u-add'){const m=document.getElementById('na-msg');m.className='msg';m.textContent='';
+        try{const r=await api('POST','/api/admin/users',{name:document.getElementById('na-name').value,email:document.getElementById('na-mail').value,role:document.getElementById('na-role').value,invite:document.getElementById('na-inv').checked});
+          const d=await r.json();if(!r.ok)throw new Error(d.message);m.className='msg ok';m.textContent='Angelegt'+(d.mailed?', Einladung verschickt.':'.');document.getElementById('na-name').value='';document.getElementById('na-mail').value='';await loadUsers()}
+        catch(e){if(e.message!=='401'){m.className='msg err';m.textContent=e.message}}return}
+    }catch(e){}return}
+  /* Termine */
   if(a==='unreha'){sched.reha=sched.reha.filter(x=>x!==b.dataset.v);touchSched();return}
-  const id=ID(S.w,S.d),L=getLog(id);
+  if(a==='mv-open'){moveUI=true;document.getElementById('movebox').innerHTML=moveBox(S.w,S.d);moveWarn();return}
+  if(a==='mv-close'){moveUI=false;document.getElementById('movebox').innerHTML=moveBox(S.w,S.d);return}
+  if(a==='mv-q'){document.getElementById('mvd').value=b.dataset.v;document.querySelector('input[name="mvk"][value="one"]').checked=true;moveWarn();return}
+  if(a==='mv-undo'){delete moves.map[b.dataset.v||id];moveUI=false;touchMoves();return}
+  if(a==='mv-ok'){const kind=(document.querySelector('input[name="mvk"]:checked')||{}).value;moveUI=false;
+    if(kind==='all'){const ds=iso(plannedDate(S.w,S.d));delete moves.map[id];if(!sched.reha.includes(ds)){sched.reha.push(ds);sched.reha.sort()}moves.updatedAt=Date.now();store(MKEY,moves);movesPend=true;flushMoves();touchSched();toast('Diese und alle folgenden Einheiten rücken weiter')}
+    else{const v=document.getElementById('mvd').value;if(!isIso(v))return;if(v===iso(plannedDate(S.w,S.d)))delete moves.map[id];else moves.map[id]=v;touchMoves();toast('Verschoben auf '+fmtDL(fromIso(v)))}
+    return}
+  /* Trainingsstatus */
+  const L=getLog(id);
+  if(a==='ui-close'){sessUI=null;document.getElementById('sessbox').innerHTML=sessBox(S.w,S.d);return}
+  if(a==='s-start'){const other=runningId();if(other&&other!==id){sessUI='switch';document.getElementById('sessbox').innerHTML=sessBox(S.w,S.d);return}
+    startSession(L);sessUI=null;touch(id);renderMain();toast('Training gestartet');return}
+  if(a==='sw-finish'){const o=runningId();if(o){const oL=logs[o];finishSession(oL,lastSetAt(oL)||Date.now());touch(o)}startSession(L);sessUI=null;touch(id);renderMain();return}
+  if(a==='s-finish'){sessUI='finish';document.getElementById('sessbox').innerHTML=sessBox(S.w,S.d);document.getElementById('sessbox').scrollIntoView({block:'start',behavior:'smooth'});return}
+  if(a==='s-finish-ok'){const v=(document.getElementById('finat')||{}).value;let at=Date.now();
+    if(/^\d{2}:\d{2}$/.test(v||'')){const d=new Date();d.setHours(+v.slice(0,2),+v.slice(3),0,0);if(d.getTime()<=Date.now()+60e3&&d.getTime()>=L.startedAt)at=d.getTime()}
+    finishSession(L,at);sessUI=null;touch(id);renderMain();if(CLK&&CLK.kind!=='tabata')clkStop();toast('Training beendet · '+Math.round((L.durS||0)/60)+' min');return}
+  if(a==='s-end-at'){finishSession(L,+b.dataset.v);sessUI=null;touch(id);renderMain();return}
+  if(a==='s-abort'){sessUI='abort';document.getElementById('sessbox').innerHTML=sessBox(S.w,S.d);return}
+  if(a==='s-abort-ok'){L.status='abgebrochen';L.finishedAt=Date.now();L.abortReason=(document.getElementById('abortwhy')||{}).value||'';if(L.startedAt)L.durS=Math.round((L.finishedAt-L.startedAt)/1000);sessUI=null;touch(id);renderMain();return}
+  if(a==='s-reopen'){L.status='laeuft';L.startedAt=L.startedAt||Date.now();delete L.finishedAt;delete L.durS;delete L.abortReason;touch(id);renderMain();return}
+  if(a==='view'){VIEW=VIEW==='runden'?'uebungen':'runden';try{localStorage.setItem(VKEY,VIEW)}catch(e){}const y=scrollY;renderMain();scrollTo(0,y);return}
+  if(a==='tb-start'){const e=DAYS[S.d].ex.find(x=>x.b===b.dataset.b);startTabata(Object.assign({},e.tabata),{id,b:e.b});return}
+  if(a==='rowclk'){const e=DAYS[S.d].ex.find(x=>x.b===b.dataset.b),i=+b.dataset.i;
+    if(statusOf(L)==='offen'){startSession(L);touch(id);document.getElementById('sessbox').innerHTML=sessBox(S.w,S.d)}
+    if(e.tmode==='in_zeit'){const s=secs(e.r)||30;clkSet({kind:'timer',dur:s,label:e.b+' '+e.n+' · '+s+' s',sub:'Wiederholungen zählen',overSub:'Zeit! Wdh. eintragen',bind:{id,b:e.b,i}})}
+    else clkSet({kind:'stopwatch',label:e.b+' '+e.n+' · Satz '+(i+1),sub:e.tmode==='auf_zeit'?'Stoppen, wenn alle Wdh. geschafft':'Stoppen beim Absetzen',bind:{id,b:e.b,i}});
+    return}
   if(a==='warm'){const i=+b.dataset.i;L.warm[i]=!L.warm[i];b.classList.toggle('on',L.warm[i])}
-  else if(a==='skill'){L.skill=!L.skill;b.classList.toggle('on',L.skill)}
+  else if(a==='sk'){const i=+b.dataset.i;L.sk[i]=!L.sk[i];b.classList.toggle('on',L.sk[i])}
   else if(a==='cool'){L.cool=!L.cool;b.classList.toggle('on',L.cool)}
   else if(a==='wu'){const E=exLog(L,b.dataset.b),i=+b.dataset.i;E.wu[i]=!E.wu[i];b.classList.toggle('on',E.wu[i]);b.querySelector('.tick').classList.toggle('on',E.wu[i])}
-  else if(a==='form'){const v=+b.dataset.v;L.fb.form=L.fb.form===v?null:v;document.querySelectorAll('#form5 button').forEach(x=>x.classList.toggle('on',+x.dataset.v===L.fb.form));
-    const fh=document.getElementById('formhint');fh.textContent=formHint(L.fb.form);fh.classList.toggle('low',!!L.fb.form&&L.fb.form<=2)}
-  else if(a==='set'){const E=exLog(L,b.dataset.b),i=+b.dataset.i;const s=E.sets[i]=E.sets[i]||{};s.d=!s.d;
-    if(s.d&&!L.doneOn){L.doneOn=iso(new Date());const fi=document.getElementById('fb-date-'+id);if(fi)fi.value=L.doneOn}
-    if(s.d){const row=b.closest('.sr');['kg','r'].forEach(k=>{if(!s[k]){const inp=row.querySelector('[data-k="'+k+'"]');const ph=inp.placeholder;if(ph&&/^[\d.,]+$/.test(ph)){s[k]=ph;inp.value=ph}}})}
-    b.classList.toggle('on',s.d);b.closest('.sr').classList.toggle('done',s.d);
-    if(s.d){const e=DAYS[S.d].ex.find(x=>x.b===b.dataset.b);let sec=pauseSec(e.pa);if(sec)startTimer(sec,e.b+' · '+e.n+' · Pause '+e.pa)}}
+  else if(a==='form'){const v=+b.dataset.v;L.fb.form=L.fb.form===v?null:v;document.querySelectorAll('[data-act="form"]').forEach(x=>x.classList.toggle('on',+x.dataset.v===L.fb.form));
+    const fh=document.getElementById('formhint');if(fh){fh.textContent=formHint(L.fb.form);fh.classList.toggle('low',!!L.fb.form&&L.fb.form<=2)}}
+  else if(a==='set'){const e=DAYS[S.d].ex.find(x=>x.b===b.dataset.b),E=exLog(L,b.dataset.b),i=+b.dataset.i;const s=E.sets[i]=E.sets[i]||{};s.d=!s.d;
+    const row=b.closest('.sr');
+    if(s.d){s.at=Date.now();
+      if(statusOf(L)==='offen'){startSession(L);document.getElementById('sessbox').innerHTML=sessBox(S.w,S.d);toast('Training gestartet')}
+      row.querySelectorAll('input[data-k]').forEach(inp=>{const k=inp.dataset.k;if(k!=='rpe'&&!s[k]&&inp.placeholder&&(k==='band'||/^[\d.,]+$/.test(inp.placeholder))){s[k]=inp.placeholder;inp.value=inp.placeholder}})}
+    else delete s.at;
+    b.classList.toggle('on',s.d);row.classList.toggle('done',s.d);
+    const rd=row.closest('.round');if(rd){const all=[...rd.querySelectorAll('.sr')].every(r=>r.classList.contains('done'));rd.classList.toggle('done',all);rd.querySelector('.rn b').textContent=all?'✓':''}
+    if(s.d)afterTick(e,i);else markNext(false)}
   touch(id)});
-main.addEventListener('change',ev=>{if(ev.target.dataset&&ev.target.dataset.done)ev.target.dispatchEvent(new Event('input',{bubbles:true}))});
 main.addEventListener('input',ev=>{const t=ev.target;const id=ID(S.w,S.d),L=getLog(id);
   if(t.dataset.k){const E=exLog(L,t.dataset.b),i=+t.dataset.i;const s=E.sets[i]=E.sets[i]||{};s[t.dataset.k]=t.value.trim()}
   else if(t.dataset.note){exLog(L,t.dataset.note).note=t.value}
+  else if(t.dataset.sknote){L.skNote=t.value}
+  else if(t.dataset.tbr){const E=exLog(L,t.dataset.tbr),i=+t.dataset.i,s=E.sets[i]=E.sets[i]||{},v=t.value.trim();if(v===''){delete s.r;delete s.d}else{s.r=String(parseInt(v,10)||0);s.d=true}}
   else if(t.dataset.fb){L.fb[t.dataset.fb]=t.value}
-  else if(t.dataset.done){if(/^\d{4}-\d{2}-\d{2}$/.test(t.value))L.doneOn=t.value;else delete L.doneOn}else return;
+  else if(t.dataset.done){if(isIso(t.value))L.doneOn=t.value;else delete L.doneOn}else return;
   touch(id)});
 
-/* ---------- rest timer ---------- */
-let tEnd=0,tDur=0,tInt=null,tBeeped=false,actx=null,wake=null;
-const TM=document.getElementById('timer');
-function primeAudio(){try{if(!actx){const A=window.AudioContext||window.webkitAudioContext;if(A)actx=new A()}if(actx&&actx.state==='suspended')actx.resume()}catch(e){}}
-function beep(){try{if(!actx)return;[0,.25,.5].forEach(o=>{const os=actx.createOscillator(),g=actx.createGain();os.frequency.value=880;g.gain.value=.15;os.connect(g);g.connect(actx.destination);os.start(actx.currentTime+o);os.stop(actx.currentTime+o+.15)})}catch(e){}
-  try{navigator.vibrate&&navigator.vibrate([200,100,200])}catch(e){}}
-async function lock(){try{if(!wake&&navigator.wakeLock)wake=await navigator.wakeLock.request('screen');wake&&wake.addEventListener('release',()=>{wake=null})}catch(e){wake=null}}
-function startTimer(sec,label){tDur=sec;tEnd=Date.now()+sec*1000;tBeeped=false;document.getElementById('tl').textContent=label;TM.hidden=false;TM.classList.remove('over');lock();
-  clearInterval(tInt);tInt=setInterval(tick,250);tick()}
-function tick(){const left=Math.round((tEnd-Date.now())/1000);const a=Math.abs(left);
-  document.getElementById('tt').textContent=(left<0?'+':'')+Math.floor(a/60)+':'+String(a%60).padStart(2,'0');
-  document.getElementById('tbar').style.width=Math.max(0,Math.min(100,(1-left/tDur)*100))+'%';
-  if(left<=0&&!tBeeped){tBeeped=true;TM.classList.add('over');beep()}
-  if(left<-120)stopTimer()}
-function stopTimer(){clearInterval(tInt);TM.hidden=true}
-document.getElementById('tplus').addEventListener('click',()=>{tEnd+=15000;tDur+=15;tBeeped=tEnd<Date.now();TM.classList.toggle('over',tBeeped);tick()});
-document.getElementById('tstop').addEventListener('click',stopTimer);
-document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!TM.hidden)lock()});
-
-let ME={name:'',email:''};
+/* ---------- Start ---------- */
+let ME={name:'',email:'',role:'user'};
 async function init(){
   setStatus();
   try{
     const [mr,pr]=await Promise.all([api('GET','/api/me'),api('GET','/api/plan')]);
     ME=await mr.json();
-    if(pr.status===404){document.getElementById('main').innerHTML='<div class="meta"><h2>Willkommen, '+esc(ME.name)+'</h2><p>Für dein Konto ist noch kein Trainingsplan hinterlegt. Lade die Vorlage herunter, lass sie mit deinem Plan ausfüllen und lade sie hier hoch.</p></div>'+planManager();document.getElementById('days').hidden=true;mode='ok';setStatus();return}
-    P=await pr.json();try{localStorage.setItem('slothly-plan',JSON.stringify(P))}catch(e){}
+    if(pr.status===404){document.getElementById('main').innerHTML='<div class="meta"><h2>Willkommen, '+esc(ME.name)+'</h2><p>Für dein Konto ist noch kein Trainingsplan hinterlegt. Lade die Vorlage herunter, lass sie mit deinem Plan ausfüllen und lade sie hier hoch.</p></div>'+planManager()+(ME.role==='admin'?adminBox():'')+accountBox();
+      document.getElementById('days').hidden=true;mode='ok';setStatus();if(ME.role==='admin')loadUsers();return}
+    P=await pr.json();store('slothly-plan',P);store('slothly-me',ME)
   }catch(e){if(e.message==='401')return;
-    try{P=JSON.parse(localStorage.getItem('slothly-plan'))}catch(x){}
+    try{P=JSON.parse(localStorage.getItem('slothly-plan'));ME=JSON.parse(localStorage.getItem('slothly-me'))||ME}catch(x){}
     if(!P){document.getElementById('main').innerHTML='<div class="meta"><h2>Keine Verbindung</h2><p>Der Plan konnte nicht geladen werden.</p></div>';mode='offline';setStatus();return}
     mode='offline'}
   DAYS=P.days;PHASE=P.weekLabels||[];NW=P.weeks;ND=DAYS.length;OFFS=DAYS.map(d=>d.offset);
-  const sd=P.startDate.split('-');START=new Date(+sd[0],sd[1]-1,+sd[2]);
-  LKEY='slothly-logs-'+P.id+'-'+(P.revision||0);SKEY='slothly-skips-'+P.id+'-'+(P.revision||0);
+  START=fromIso(P.startDate);
+  const rv=P.id+'-'+(P.revision||0);LKEY='slothly-logs-'+rv;SKEY='slothly-skips-'+rv;MKEY='slothly-moves-'+rv;
   try{logs=JSON.parse(localStorage.getItem(LKEY))||{}}catch(e){logs={}}
   try{const r=localStorage.getItem(SKEY);sched=r?JSON.parse(r):{reha:(P.skips&&P.skips.dates)||[],updatedAt:(P.skips&&P.skips.updatedAt)||0}}catch(e){}
+  try{const r=localStorage.getItem(MKEY);moves=r?JSON.parse(r):{map:(P.moves&&P.moves.map)||{},updatedAt:(P.moves&&P.moves.updatedAt)||0}}catch(e){}
   document.title=P.name+' · Slothly';
   document.querySelector('h1').innerHTML=esc(P.name)+(P.subtitle?' <span>· '+esc(P.subtitle)+'</span>':'');
   document.getElementById('weeks').style.gridTemplateColumns='repeat('+(NW+1)+',1fr)';
@@ -538,5 +1037,4 @@ async function init(){
 init();
 })();
 </script>
-
 </body></html>
