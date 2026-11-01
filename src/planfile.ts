@@ -2,16 +2,27 @@
 // KI-Assistenten zum Ausfüllen) und die interne Form (kurze Schlüssel wie in der Oberfläche).
 // Ältere Dateien im Format slothly-plan/1 werden weiter angenommen.
 
-export type Format = 'standard' | 'per_pause' | 'circuit' | 'rounds';
+import { deriveCapture, normalizeSkillBlock, FIELDS, TIME_MODES, WEIGHT_REFS, type SkillBlock } from './derive.ts';
+
+export type Format = 'standard' | 'per_pause' | 'circuit' | 'rounds' | 'tabata';
+/** Tabata (#11): Arbeit/Pause in Sekunden, Runden je Satz, Sätze, Pause zwischen Sätzen, Übungen im Wechsel. */
+export interface TabataCfg { work: number; rest: number; rounds: number; sets: number; setRest: number; ex: string[] }
 
 /** Interne Form: so liefert /api/plan den Plan an die Oberfläche. */
 export interface PlanSlot {
   b: string; n: string; m?: string | null; q?: string | null; k?: string | null; i?: string | null;
   st?: string | null; pa?: string | null; scheme: string; format: Format;
   r?: string | null; side?: string | null; wu?: boolean; top?: boolean; cap?: string | null;
+  /** #10: erfasste Werte, Zeitmodus, Gewichtsbezug (null = aus Texten ableiten). */
+  fields?: string[] | null; tmode?: string | null; wref?: string | null;
+  /** #7: Pause in Sekunden (null = aus dem Pausentext ableiten). */
+  ps?: number | null;
+  tabata?: TabataCfg | null;
 }
 export interface PlanDay {
   title: string; offset: number; warm?: string[]; skill?: string | null; cool?: string | null;
+  /** #5: strukturierter Skill-Block; ohne ihn wird `skill` (Text) beim Laden zerlegt. */
+  skillBlock?: SkillBlock | null;
   notes?: string[]; groups?: Record<string, string>; ex: PlanSlot[];
 }
 export interface RuleSection { title: string; p?: string[]; ul?: string[]; table?: { head: string[]; rows: string[][] } }
@@ -30,19 +41,22 @@ export interface PlanV2 {
   schemata: Record<string, { saetze: number; rpe?: string | null }[]>;
   regeln?: { titel: string; absaetze?: string[]; liste?: string[]; tabelle?: { kopf: string[]; zeilen: string[][] } }[];
   tage: {
-    titel: string; wochentag: string; aufwaermen?: string[]; skill?: string | null; cooldown?: string | null;
+    titel: string; wochentag: string; aufwaermen?: string[]; cooldown?: string | null;
+    skill?: string | { titel?: string; dauer?: string; hinweis?: string; wochen?: unknown[]; uebungen?: unknown[] } | null;
     hinweise?: string[]; bloecke?: Record<string, string>;
     uebungen: {
       block: string; name: string; muskel?: string | null; video?: string | null; kadenz?: string | null; info?: string | null;
       start?: string | null; pause?: string | null; schema: string; darstellung?: string; wdh?: string | null; seite?: string | null;
       aufwaermsaetze?: boolean; topsatz?: boolean; deckel?: string | null;
+      erfassung?: string[]; zeitmodus?: string; gewicht?: string; pause_s?: number;
+      tabata?: { arbeit_s?: number; pause_s?: number; runden?: number; saetze?: number; satzpause_s?: number; uebungen?: string[] };
     }[];
   }[];
 }
 
 const WD = ['Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa', 'So'];
-const DARST: Record<string, Format> = { saetze: 'standard', pausenfueller: 'per_pause', zirkel: 'circuit', runden: 'rounds' };
-const DARST_REV: Record<Format, string> = { standard: 'saetze', per_pause: 'pausenfueller', circuit: 'zirkel', rounds: 'runden' };
+const DARST: Record<string, Format> = { saetze: 'standard', pausenfueller: 'per_pause', zirkel: 'circuit', runden: 'rounds', tabata: 'tabata' };
+const DARST_REV: Record<Format, string> = { standard: 'saetze', per_pause: 'pausenfueller', circuit: 'zirkel', rounds: 'runden', tabata: 'tabata' };
 
 export const LIMITS = { weeks: 26, days: 7, exercises: 40, text: 500 };
 
@@ -66,7 +80,9 @@ function fromV2(f: PlanV2, errors: string[]): PlanFile {
       const off = WD.indexOf(String(t?.wochentag ?? '').slice(0, 2));
       if (off < 0) errors.push(`Tag ${di + 1}: wochentag muss Mo, Di, Mi, Do, Fr, Sa oder So sein`);
       return {
-        title: String(t?.titel ?? ''), offset: off, warm: strs(t?.aufwaermen), skill: str(t?.skill), cool: str(t?.cooldown),
+        title: String(t?.titel ?? ''), offset: off, warm: strs(t?.aufwaermen), cool: str(t?.cooldown),
+        skill: typeof t?.skill === 'string' ? str(t.skill) : null,
+        skillBlock: t?.skill && typeof t.skill === 'object' ? normalizeSkillBlock(t.skill, Number(f.wochen) || 1) : null,
         notes: strs(t?.hinweise), groups: t?.bloecke ?? {},
         ex: (Array.isArray(t?.uebungen) ? t.uebungen : []).map(u => {
           const d = String(u?.darstellung ?? 'saetze');
@@ -75,6 +91,14 @@ function fromV2(f: PlanV2, errors: string[]): PlanFile {
             b: String(u?.block ?? ''), n: String(u?.name ?? ''), m: str(u?.muskel), q: str(u?.video), k: str(u?.kadenz), i: str(u?.info),
             st: str(u?.start), pa: str(u?.pause), scheme: String(u?.schema ?? ''), format: DARST[d] ?? 'standard',
             r: str(u?.wdh), side: str(u?.seite), wu: !!u?.aufwaermsaetze, top: !!u?.topsatz, cap: str(u?.deckel),
+            fields: Array.isArray(u?.erfassung) ? u.erfassung.map(String) : null,
+            tmode: str(u?.zeitmodus), wref: str(u?.gewicht),
+            ps: u?.pause_s === undefined || u?.pause_s === null ? null : Number(u.pause_s),
+            tabata: u?.tabata ? {
+              work: Number(u.tabata.arbeit_s ?? 20), rest: Number(u.tabata.pause_s ?? 10), rounds: Number(u.tabata.runden ?? 8),
+              sets: Number(u.tabata.saetze ?? 1), setRest: Number(u.tabata.satzpause_s ?? 60),
+              ex: strs(u.tabata.uebungen).length ? strs(u.tabata.uebungen) : [String(u?.name ?? '')],
+            } : null,
           };
         }),
       };
@@ -96,7 +120,10 @@ export function toV2(p: PlanFile): PlanV2 {
       return o;
     }),
     tage: p.days.map(d => ({
-      titel: d.title, wochentag: WD[d.offset], aufwaermen: d.warm ?? [], skill: d.skill ?? null, cooldown: d.cool ?? null,
+      titel: d.title, wochentag: WD[d.offset], aufwaermen: d.warm ?? [],
+      skill: d.skillBlock ? { titel: d.skillBlock.title, ...(d.skillBlock.dur ? { dauer: d.skillBlock.dur } : {}), ...(d.skillBlock.hint ? { hinweis: d.skillBlock.hint } : {}),
+        wochen: d.skillBlock.weeks.map(w => w.map(i => ({ name: i.n, ...(i.v ? { vorgabe: i.v } : {}), ...(i.q ? { video: i.q } : {}) }))) } : (d.skill ?? null),
+      cooldown: d.cool ?? null,
       hinweise: d.notes ?? [], bloecke: d.groups ?? {},
       uebungen: d.ex.map(e => {
         const u: PlanV2['tage'][number]['uebungen'][number] = { block: e.b, name: e.n, muskel: e.m ?? null, video: e.q ?? null,
@@ -106,6 +133,11 @@ export function toV2(p: PlanFile): PlanV2 {
         if (e.wu) u.aufwaermsaetze = true;
         if (e.top) u.topsatz = true;
         if (e.cap) u.deckel = e.cap;
+        if (e.fields?.length) u.erfassung = e.fields;
+        if (e.tmode) u.zeitmodus = e.tmode;
+        if (e.wref) u.gewicht = e.wref;
+        if (e.ps != null) u.pause_s = e.ps;
+        if (e.tabata) u.tabata = { arbeit_s: e.tabata.work, pause_s: e.tabata.rest, runden: e.tabata.rounds, saetze: e.tabata.sets, satzpause_s: e.tabata.setRest, uebungen: e.tabata.ex };
         return u;
       }),
     })),
@@ -161,6 +193,9 @@ export function checkPlan(p: PlanFile): { errors: string[]; warnings: string[] }
     const T = `Tag ${di + 1}`;
     if (!d.title?.trim()) e(`${T}: titel fehlt`);
     if (!Number.isInteger(d.offset) || d.offset < 0 || d.offset > 6) e(`${T}: wochentag ungültig`);
+    if (d.skillBlock) {
+      if (d.skillBlock.weeks.some(w => !w.length || w.some(i => !i.n.trim()))) e(`${T}: skill braucht pro Woche mindestens ein Element mit name`);
+    }
     if (!Array.isArray(d.ex) || !d.ex.length) { e(`${T}: uebungen fehlt`); return; }
     if (d.ex.length > LIMITS.exercises) e(`${T}: höchstens ${LIMITS.exercises} Übungen`);
     const seen = new Set<string>();
@@ -174,6 +209,19 @@ export function checkPlan(p: PlanFile): { errors: string[]; warnings: string[] }
       if (!schemes[x.scheme]) e(`${W}: schema "${x.scheme}" ist unter schemata nicht definiert`);
       else used.add(x.scheme);
       if ((x.format === 'standard' || x.format === 'per_pause') && !x.r) warnings.push(`${W}: wdh fehlt`);
+      if (x.fields != null && (!Array.isArray(x.fields) || !x.fields.length || !x.fields.every(f => (FIELDS as string[]).includes(f))))
+        e(`${W}: erfassung ist eine Liste aus ${FIELDS.join(', ')}`);
+      if (x.tmode != null && !(TIME_MODES as string[]).includes(x.tmode)) e(`${W}: zeitmodus muss ${TIME_MODES.join(', ')} sein`);
+      if (x.wref != null && !(WEIGHT_REFS as string[]).includes(x.wref)) e(`${W}: gewicht muss ${WEIGHT_REFS.join(', ')} sein`);
+      if (x.ps != null && (!Number.isInteger(x.ps) || x.ps < 0 || x.ps > 3600)) e(`${W}: pause_s muss eine ganze Zahl von 0 bis 3600 sein`);
+      if (x.format === 'tabata') {
+        const t = x.tabata;
+        if (!t) e(`${W}: darstellung tabata braucht ein Feld tabata`);
+        else {
+          const rng = (v: number, a: number, b: number, n: string) => { if (!Number.isInteger(v) || v < a || v > b) e(`${W}: tabata.${n} muss ${a} bis ${b} sein`); };
+          rng(t.work, 5, 600, 'arbeit_s'); rng(t.rest, 0, 600, 'pause_s'); rng(t.rounds, 1, 50, 'runden'); rng(t.sets, 1, 10, 'saetze'); rng(t.setRest, 0, 900, 'satzpause_s');
+        }
+      }
       if (x.top && p.topsetWeek == null) warnings.push(`${W}: topsatz gesetzt, aber keine topsatzWoche`);
       if (x.format === 'standard' && x.scheme in schemes && schemes[x.scheme].some(w => Array.isArray(w) && !w[1])) warnings.push(`${W}: Schema ${x.scheme} hat Wochen ohne rpe`);
     });
@@ -191,6 +239,20 @@ export function summarize(p: PlanFile) {
   const fmt = (d: Date) => d.toISOString().slice(0, 10).split('-').reverse().join('.');
   return {
     name: p.name, subtitle: p.subtitle ?? null, start: fmt(s), end: fmt(end), weeks: p.weeks,
-    days: p.days.map(d => ({ title: d.title, weekday: WD[d.offset], exercises: d.ex.map(x => `${x.b} ${x.n}`) })),
+    days: p.days.map(d => ({
+      title: d.title, weekday: WD[d.offset],
+      skill: d.skillBlock ? d.skillBlock.title : d.skill ? 'Skill (Text)' : null,
+      exercises: d.ex.map(x => `${x.b} ${x.n} · ${captureLabel(x)}`),
+    })),
   };
+}
+
+const FIELD_LABEL: Record<string, string> = { gewicht: 'kg', wdh: 'Wdh.', zeit: 'Zeit', band: 'Band' };
+/** Kurzbeschreibung der Erfassung für die Upload-Vorschau, z. B. „kg je Hand × Wdh.“ oder „Zeit (halten)“. */
+export function captureLabel(x: PlanSlot): string {
+  if (x.format === 'tabata' && x.tabata) return `Tabata ${x.tabata.work}/${x.tabata.rest} s × ${x.tabata.rounds}${x.tabata.sets > 1 ? ` × ${x.tabata.sets} Sätze` : ''}`;
+  const c = deriveCapture(x);
+  const parts = c.fields.map(f => f === 'gewicht' && c.wref ? `kg ${c.wref === 'je_hand' ? 'je Hand' : c.wref === 'je_seite' ? 'je Seite' : 'gesamt'}` : FIELD_LABEL[f]);
+  const mode = c.tmode === 'halten' ? ' (halten)' : c.tmode === 'in_zeit' ? ' (in fester Zeit)' : c.tmode === 'auf_zeit' ? ' (auf Zeit)' : '';
+  return parts.join(' × ') + mode;
 }

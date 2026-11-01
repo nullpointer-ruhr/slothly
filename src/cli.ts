@@ -11,7 +11,8 @@ const HELP = `Befehle:
   add-user <email> <name>                  Konto anlegen (Anmeldung dann per Mail-Link)
   disable-user <email>                     Konto sperren, alle Sessions beenden
   users                                    Konten auflisten
-  login-link <email>                       Anmelde-Link ausgeben (ohne Mailversand)
+  login-link <email>                       Anmelde-Code und -Link ausgeben (ohne Mailversand)
+  set-role <email> <user|admin>            Rolle setzen (Admins verwalten Konten in der App)
   import-plan <email> <datei|->            Plan importieren und aktiv setzen
   import-logs <email> <datei|->            Trainingsdaten in den aktiven Plan übernehmen
   export <email>                           Alle Daten des Kontos als JSON auf stdout`;
@@ -44,15 +45,21 @@ try {
     if (!r.rows[0]) throw new Error('Kein solches Konto');
     await db.query('DELETE FROM sessions WHERE user_id = $1', [r.rows[0].id]);
     console.log('Gesperrt, alle Geräte abgemeldet.');
+  } else if (cmd === 'set-role') {
+    const [email, role] = args;
+    if (!['user', 'admin'].includes(role)) throw new Error('set-role <email> <user|admin>');
+    const r = await db.query('UPDATE users SET role = $2 WHERE email = $1 RETURNING id', [normEmail(email), role]);
+    if (!r.rows[0]) throw new Error('Kein solches Konto');
+    console.log(`${normEmail(email)} ist jetzt ${role === 'admin' ? 'Admin' : 'Nutzer'}.`);
   } else if (cmd === 'users') {
-    const r = await db.query(`SELECT u.email, u.name, u.disabled_at IS NOT NULL AS gesperrt, p.name AS plan
+    const r = await db.query(`SELECT u.email, u.name, u.role AS rolle, u.disabled_at IS NOT NULL AS gesperrt, p.name AS plan
                                 FROM users u LEFT JOIN plans p ON p.user_id = u.id AND p.active ORDER BY u.created_at`);
     console.table(r.rows);
   } else if (cmd === 'login-link') {
     const origin = process.env.PUBLIC_ORIGIN;
     if (!origin) throw new Error('PUBLIC_ORIGIN fehlt');
     const l = await createLoginLink(db, { publicOrigin: origin.replace(/\/$/, ''), loginLinkMinutes: 60 }, args[0] ?? '', true);
-    if (!l || l === 'limit') throw new Error('Kein aktives Konto mit dieser Adresse');
+    if (!l || l.limit) throw new Error('Kein aktives Konto mit dieser Adresse');
     console.log(`Gültig 60 Minuten, einmal verwendbar.\nCode (in der App eingeben, nach "Link schicken"): ${l.code}\nLink (meldet den Browser an, in dem er sich öffnet):\n${l.link}`);
   } else if (cmd === 'import-plan') {
     const id = await importPlan(db, args[0] ?? '', readPlanFile(await readJson(args[1])), true);

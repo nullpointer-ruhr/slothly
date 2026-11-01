@@ -118,7 +118,7 @@ test('fremde Pläne sind nicht erreichbar', async () => {
 
 test('beide Pläne teilen sich die Übungsbibliothek', async () => {
   const r = await db.query(`SELECT count(*)::int AS n FROM exercises`);
-  assert.equal(r.rows[0].n, 8);
+  assert.equal(r.rows[0].n, 9);
 });
 
 test('ungültige Pläne werden vor dem Schreiben abgelehnt', () => {
@@ -202,10 +202,12 @@ test('Anmeldung mit Code: in der Mail, Fehlversuche begrenzt, nur der neueste gi
   for (let i = 0; i < 4; i++) await send(bad);
   assert.equal((await send(code(m3))).statusCode, 400, 'nach 5 Fehlversuchen ist der Code verbraucht');
 
-  // Höchstens 5 Codes pro Stunde und Konto: danach gleiche Antwort, aber keine Mail
+  // Höchstens 5 Codes pro Stunde und Konto: danach klare Meldung, keine Mail
   await req(); await req();
   mails.length = 0;
-  assert.equal((await post('/api/login/request', { email: 'mella@example.org' })).statusCode, 200);
+  const lim = await post('/api/login/request', { email: 'mella@example.org' });
+  assert.equal(lim.statusCode, 429);
+  assert.match(lim.json().message, /Zu viele Codes angefordert\. Bitte in \d+ Minute/);
   assert.equal(mails.length, 0);
 
   await db.query('DELETE FROM login_tokens');
