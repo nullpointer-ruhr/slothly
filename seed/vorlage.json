@@ -10,6 +10,7 @@
     "uebungen: block (A, A+, B1, B2 ...; Supersätze und Zirkel teilen den Buchstaben und werden in der App rundenweise angezeigt), name, muskel, video (Suchbegriff, englisch findet mehr), kadenz (z. B. 3-1-X-0), info, start (Startgewicht, bei zwei Kurzhanteln '2×8 kg'), pause (z. B. '2 min', '90 s', 'direkt zu B2'), schema, wdh (z. B. 8–12, '20 s', '30–45 s halten'), optional seite ('je Seite'), aufwaermsaetze (true: 10 / 50 % / 75 %), topsatz (true: in der topsatzWoche 1×5–8 @9), deckel (Hinweis-Etikett).",
     "Erfassung (optional, sonst aus wdh und start abgeleitet): erfassung = Liste aus gewicht, wdh, zeit, band (z. B. ['zeit'] für Halten, ['zeit','gewicht'] für Halten mit Gewicht, ['band','wdh'] für Bänder). zeitmodus = halten (Stoppuhr, Zeit ist das Ergebnis), in_zeit (Countdown, Wdh. sind das Ergebnis), auf_zeit (Stoppuhr für feste Wdh.). gewicht = gesamt, je_hand oder je_seite (wie das Gewicht einzutragen ist). pause_s = Pause in Sekunden, wenn der Pausentext nicht eindeutig ist.",
     "darstellung: saetze = normale Arbeitssätze; zirkel = Runden × wdh; runden = Runden mit Freitext in wdh; pausenfueller = 1 × wdh in jeder Pause des Hauptblocks; tabata = Intervalluhr, dazu tabata: {arbeit_s: 20, pause_s: 10, runden: 8, saetze: 1, satzpause_s: 60, uebungen: ['Kettlebell Swing', 'Air Squat']} (Übungen im Wechsel).",
+    "bloecke: Name je Blockbuchstabe, z. B. {'A': 'Block A · Hauptübung'}. Optional mit Uhr für den ganzen Block: {'titel': 'Zirkel C', 'uhr': {...}}. Uhren: {'art': 'amrap', 'minuten': 12} = so viele Runden wie möglich; {'art': 'emom', 'alle_s': 60, 'runden': 10} = jede Minute eine Runde; {'art': 'fortime', 'minuten': 15, 'runden': 5} = auf Zeit mit Zeitlimit (runden optional); {'art': 'intervall', 'arbeit_s': 40, 'pause_s': 20, 'runden': 8}. Das Ergebnis (Runden, Zeit) wird in der Einheit gespeichert.",
     "regeln: Abschnitte für den Regeln-Reiter mit titel und optional absaetze, liste, tabelle {kopf, zeilen}. **fett** ist erlaubt.",
     "Das Feld _anleitung wird beim Hochladen ignoriert und darf bleiben oder gelöscht werden."
   ],
@@ -171,7 +172,13 @@
       "bloecke": {
         "A": "Block A · Hauptübung",
         "B": "Supersatz B",
-        "C": "Zirkel C"
+        "C": {
+          "titel": "Zirkel C · AMRAP",
+          "uhr": {
+            "art": "amrap",
+            "minuten": 8
+          }
+        }
       },
       "uebungen": [
         {

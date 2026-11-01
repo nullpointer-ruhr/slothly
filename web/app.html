@@ -243,13 +243,13 @@ body.kb .timer{bottom:auto;top:0;padding-bottom:0;padding-top:env(safe-area-inse
 .scrim{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:29}
 .sheet{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface);border-top:1px solid var(--line);border-radius:16px 16px 0 0;box-shadow:0 -8px 30px rgba(0,0,0,.25);padding:12px max(16px,env(safe-area-inset-left)) calc(16px + env(safe-area-inset-bottom));max-height:92vh;overflow:auto;display:grid;gap:14px;max-width:720px;margin:0 auto}
 .sheet h3{margin:0;font-family:var(--f-display);font-size:22px;display:flex;justify-content:space-between;align-items:center}
-.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:3px}
+.tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;background:var(--surface2);border:1px solid var(--line);border-radius:10px;padding:3px}
 .tabs button{border:0;background:transparent;border-radius:8px;padding:8px 4px;cursor:pointer;font-weight:600}
 .tabs button.on{background:var(--surface);box-shadow:0 1px 3px rgba(0,0,0,.12)}
 .big{font-family:var(--f-display);font-size:68px;font-weight:700;text-align:center;font-variant-numeric:tabular-nums;line-height:1}
 .qrow{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
 .qrow button,.qrow .tbtn{min-width:64px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface2);cursor:pointer;font-weight:600;font-size:15px}
-.qrow .go{min-width:120px;height:48px;font-size:17px}
+.qrow .go{min-width:120px;height:48px;font-size:17px;background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .laps{display:grid;gap:2px;font-variant-numeric:tabular-nums;font-size:15px;max-height:30vh;overflow:auto}
 .laps div{display:flex;justify-content:space-between;border-bottom:1px solid var(--line);padding:4px 2px}
 .cfg{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px}
@@ -272,6 +272,33 @@ body.kb .timer{bottom:auto;top:0;padding-bottom:0;padding-top:env(safe-area-inse
 .tbt .sum{display:grid;gap:6px;font-size:16px}
 .tbt .sum .tbres label{color:rgba(255,255,255,.8)}
 .tbt .sum .tbres input{background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.4);color:#fff}
+/* ---------- AMRAP, EMOM, For Time (#4) ---------- */
+.tbt.amrap,.tbt.fortime{background:#1d8549} .tbt.emom{background:#1d6f85} .tbt.capped{background:#a9500f}
+.tbt .rc{display:flex;align-items:center;justify-content:center;gap:16px}
+.tbt .rc .plus{width:auto;min-width:160px;height:72px;border-radius:36px;font-size:24px;padding:0 24px}
+.tbt .rc .minus{width:52px;height:52px;font-size:24px}
+.tbt .rc button{border:2px solid rgba(255,255,255,.8);background:rgba(255,255,255,.12);color:#fff;font-weight:700;cursor:pointer;border-radius:50%}
+.tbt .rcn{font-size:20px;font-weight:600}
+.tbt .num{font-size:min(40vw,240px,42vh)}
+.tbt .sum input,.tbt .sum select{height:48px;border:1px solid rgba(255,255,255,.4);border-radius:10px;background:rgba(255,255,255,.12);color:#fff;font-size:20px;padding:0 10px;width:110px;text-align:center}
+.tbt .sum .fl{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+.tbt .sum label{display:grid;gap:4px;font-size:13px;color:rgba(255,255,255,.85)}
+@media (orientation:landscape) and (max-height:520px){
+  .tbt{grid-template-rows:auto 1fr auto;gap:6px;padding-top:calc(8px + env(safe-area-inset-top));padding-bottom:calc(8px + env(safe-area-inset-bottom))}
+  .tbt .mid{grid-template-columns:1fr auto;align-items:center;column-gap:20px}
+  .tbt .mid>.ph{grid-column:1/-1}
+  .tbt .num{font-size:min(60vh,30vw)}
+  .tbt .ph{font-size:24px}
+  .tbt .foot button{height:40px}}
+.wodbar{display:grid;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--surface2)}
+.wodbar .wh{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.wodbar .wh b{font-size:15px}
+.wodres{display:flex;gap:8px;flex-wrap:wrap;align-items:end}
+.wodres label{display:grid;gap:2px;font-size:11px;color:var(--muted);text-transform:uppercase}
+.wodres input{height:40px;width:84px;border:1px solid var(--line);border-radius:9px;background:var(--surface);padding:0 8px;font-size:16px}
+.seg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.seg button{height:40px;border:1px solid var(--line);background:var(--surface2);border-radius:9px;font-weight:600;cursor:pointer}
+.seg button.on{background:var(--accent);color:#fff;border-color:var(--accent)}
 /* ---------- Verwaltung (#3) ---------- */
 .adm{display:grid;gap:10px;padding:14px}
 .adm h3{font-family:var(--f-display);font-size:20px;margin:0}
@@ -296,7 +323,7 @@ body.kb .timer{bottom:auto;top:0;padding-bottom:0;padding-top:env(safe-area-inse
 <header><div class="wrap">
   <div class="top"><h1>Slothly</h1>
     <div class="topr"><button type="button" class="runchip" id="runchip" hidden></button><div class="status" id="status"><b></b>lädt…</div>
-    <button type="button" class="clockbtn" id="clockbtn" aria-label="Uhr: Stoppuhr, Timer, Tabata"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5M12 2.5V5"/></svg></button></div></div>
+    <button type="button" class="clockbtn" id="clockbtn" aria-label="Uhr: Stoppuhr, Timer, Intervall, AMRAP, EMOM"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2.5M9.5 2.5h5M12 2.5V5"/></svg></button></div></div>
   <div class="weeks" id="weeks"></div>
   <div class="days" id="days"></div>
 </div></header>
@@ -311,11 +338,11 @@ body.kb .timer{bottom:auto;top:0;padding-bottom:0;padding-top:env(safe-area-inse
 (function(){
 "use strict";
 /* ======================================================================
-   Slothly 0.2 · Oberfläche
+   Slothly 0.3 · Oberfläche
    Plan aus der API, Einträge je Einheit als ein Dokument (offline-fähig),
-   Uhr (Pause, Stoppuhr, Timer, Tabata), Trainingsstatus, Verschieben, Verwaltung.
+   Uhr (Pause, Stoppuhr, Timer, Intervall, AMRAP, EMOM, For Time), Trainingsstatus, Verschieben, Verwaltung.
    ====================================================================== */
-const VERSION='0.2.0';
+const VERSION='0.3.0';
 let P=null,DAYS=[],PHASE=[],START=null,NW=6,ND=3,OFFS=[0,2,4];
 const WD=['So','Mo','Di','Mi','Do','Fr','Sa'];
 const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -546,6 +573,7 @@ function renderSession(){const w=S.w,d=S.d,D=DAYS[d],id=ID(w,d),L=getLog(id),dt=
   groupsOf(D).forEach(G=>{const multi=G.ex.filter(e=>e.format!=='tabata').length>1;
     h+='<section class="box" data-g="'+G.g+'"><div class="ssrow"><span class="ss">'+esc(gname[G.g]||('Block '+G.g))+'</span>'+
       (multi?'<button type="button" class="vtog" data-act="view">'+(VIEW==='runden'?'Ansicht: Runden':'Ansicht: Übungen')+'</button>':'')+'</div>';
+    const ck=(D.clocks||{})[G.g];if(ck)h+=wodBar(G,ck,L);
     if(multi&&VIEW==='runden')h+=renderRounds(G,w,d,L);
     else G.ex.forEach(e=>{h+=e.format==='tabata'?renderTabataEx(e,w,d,L):renderEx(e,w,d,L)});
     h+='</section>'});
@@ -711,7 +739,7 @@ async function checkUpload(file){
         '<button type="button" class="go" data-act="planreplace">„'+esc(P.name)+'“ ersetzen, Einträge behalten</button>'}
     showPrev('<div class="prev"><h4>'+esc(s.name)+(s.subtitle?' · '+esc(s.subtitle):'')+'</h4>'+
      '<span class="muted">'+s.start+' bis '+s.end+' · '+s.weeks+' Wochen · '+s.days.length+' Tage pro Woche</span>'+
-     s.days.map(t=>'<div><b>'+esc(t.weekday)+' · '+esc(t.title)+'</b>'+(t.skill?' <span class="muted">Skill: '+esc(t.skill)+'</span>':'')+'<ul>'+t.exercises.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>').join('')+warn+
+     s.days.map(t=>'<div><b>'+esc(t.weekday)+' · '+esc(t.title)+'</b>'+(t.skill?' <span class="muted">Skill: '+esc(t.skill)+'</span>':'')+(t.clocks&&t.clocks.length?' <span class="muted">Uhr: '+t.clocks.map(esc).join(', ')+'</span>':'')+'<ul>'+t.exercises.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul></div>').join('')+warn+
      '<div class="acts"><button type="button" class="'+(P?'tbtn':'go')+'" data-act="planok">Als neuen Zyklus übernehmen</button>'+rep+'<button type="button" class="tbtn" data-act="planno">Abbrechen</button></div>'+
      (P?'<span class="muted">Als neuer Zyklus bleibt „'+esc(P.name)+'“ mit allen Einträgen erhalten und lässt sich wieder aktivieren. Ersetzen behält die Einträge im laufenden Plan.</span>':'')+'</div>')}
   catch(e){if(e.message!=='401')showPrev('<div class="prev"><h4 class="bad">Prüfung fehlgeschlagen</h4><p class="muted">'+esc(e.message)+'</p></div>')}}
@@ -768,6 +796,7 @@ function clkPause(){if(!CLK||CLK.paused)return;CLK.paused=true;CLK.pausedAt=now(
 function clkResume(){if(!CLK||!CLK.paused)return;CLK.pauseAcc+=now()-CLK.pausedAt;CLK.paused=false;clkTick()}
 function clkTick(){const c=CLK;if(!c){TM.hidden=true;return}
   if(c.kind==='tabata'){tabataTick();return}
+  if(c.kind==='wod'){wodTick();return}
   let txt,frac=0,over=false;
   if(c.kind==='stopwatch'||c.kind==='next'){txt=fmtClock(elapsed(c))}
   else{const l=left(c);frac=1-l/c.dur;
@@ -788,7 +817,7 @@ function clkTick(){const c=CLK;if(!c){TM.hidden=true;return}
 function clkEnded(c){if(c.bind&&c.kind==='timer'){/* Wdh. in fester Zeit: Zeit um, Wdh. eintragen */const inp=document.querySelector('#main input[data-b="'+cssEsc(c.bind.b)+'"][data-i="'+c.bind.i+'"][data-k="r"]');if(inp)inp.closest('.sr').classList.add('next')}}
 const cssEsc=s=>String(s).replace(/["\\]/g,'\\$&');
 TM.addEventListener('click',ev=>{const a=ev.target.closest('[data-tact]');if(!a||!CLK)return;primeAudio();const k=a.dataset.tact,c=CLK;
-  if(k==='open')openSheet(c.kind==='stopwatch'?'stopwatch':c.kind==='tabata'?'tabata':'timer');
+  if(k==='open'){if(c.kind==='wod')renderWod();else openSheet(c.kind==='stopwatch'?'stopwatch':c.kind==='tabata'?'tabata':'timer')}
   else if(k==='stop')clkStop();
   else if(k==='p15'){c.dur+=15;c.beeps={};clkTick()}
   else if(k==='m15'){c.dur=Math.max(1,c.dur-15);clkTick()}
@@ -816,13 +845,13 @@ function afterTick(e,i){const D=DAYS[S.d],G=groupsOf(D).find(g=>g.ex.includes(e)
 const OV=document.getElementById('overlay');
 function openSheet(tab){sheetTab=tab||sheetTab;sheetOpen=true;renderSheet()}
 function closeSheet(){sheetOpen=false;renderSheet()}
-document.getElementById('clockbtn').addEventListener('click',()=>{primeAudio();openSheet(CLK&&CLK.kind==='stopwatch'?'stopwatch':CLK&&(CLK.kind==='timer'||CLK.kind==='pause')?'timer':sheetTab)});
+document.getElementById('clockbtn').addEventListener('click',()=>{primeAudio();if(WO){renderWod();return}if(TB){renderTabata();return}openSheet(CLK&&CLK.kind==='stopwatch'?'stopwatch':CLK&&(CLK.kind==='timer'||CLK.kind==='pause')?'timer':sheetTab)});
 let tbCfg={work:20,rest:10,rounds:8,sets:1,setRest:60};try{Object.assign(tbCfg,JSON.parse(localStorage.getItem('slothly-tabata')||'{}'))}catch(e){}
-function renderSheet(){if(TB){renderTabata();return}
+function renderSheet(){if(WO){renderWod();return}if(TB){renderTabata();return}
   if(!sheetOpen){OV.innerHTML='';return}
   const tab=(k,t)=>'<button type="button" class="'+(sheetTab===k?'on':'')+'" data-sact="tab" data-v="'+k+'">'+t+'</button>';
   let h='<div class="scrim" data-sact="close"></div><div class="sheet" role="dialog" aria-label="Uhr"><h3>Uhr <button type="button" class="tbtn" data-sact="close">Schließen</button></h3>'+
-    '<div class="tabs">'+tab('stopwatch','Stoppuhr')+tab('timer','Timer')+tab('tabata','Tabata')+'</div><div id="sheetbody">';
+    '<div class="tabs">'+tab('stopwatch','Stoppuhr')+tab('timer','Timer')+tab('tabata','Intervall')+tab('wod','WOD')+'</div><div id="sheetbody">';
   if(sheetTab==='stopwatch'){const run=CLK&&CLK.kind==='stopwatch';
     h+='<div class="big" id="sbig">'+(run?fmtClock(elapsed(CLK)):'0:00')+'</div><div class="qrow">'+
       (run?(CLK.paused?'<button type="button" class="go" data-sact="sw-resume">Weiter</button>':'<button type="button" class="go" data-sact="sw-pause">Stopp</button>')+'<button type="button" data-sact="sw-lap"'+(CLK.paused?' disabled':'')+'>Runde</button><button type="button" data-sact="sw-reset">Zurücksetzen</button>':'<button type="button" class="go" data-sact="sw-start">Start</button>')+
@@ -832,17 +861,24 @@ function renderSheet(){if(TB){renderTabata();return}
       '<div class="qrow">'+[30,60,90,120,180].map(s=>'<button type="button" data-sact="t-q" data-v="'+s+'">'+(s<60?s+' s':s%60?fmtClock(s):s/60+' min')+'</button>').join('')+'</div>'+
       '<div class="qrow"><input id="tcustom" inputmode="numeric" placeholder="mm:ss" style="width:110px;height:44px;border:1px solid var(--line);border-radius:10px;padding:0 10px;font-size:17px;background:var(--surface2)"><button type="button" data-sact="t-custom">Start</button></div>'+
       (run?'<div class="qrow"><button type="button" data-sact="t-m15">−15 s</button><button type="button" data-sact="t-p15">+15 s</button>'+(CLK.paused?'<button type="button" class="go" data-sact="t-resume">Weiter</button>':'<button type="button" data-sact="t-pause">Pause</button>')+'<button type="button" data-sact="t-reset">Stopp</button></div>':'')}
-  else{h+='<div class="cfg">'+[['work','Arbeit (s)'],['rest','Pause (s)'],['rounds','Runden'],['sets','Sätze'],['setRest','Satzpause (s)']].map(([k,t])=>'<label>'+t+'<input data-tcfg="'+k+'" inputmode="numeric" value="'+tbCfg[k]+'"></label>').join('')+'</div>'+
-      '<p style="margin:0;font-size:13px;color:var(--muted)">Standard 20 s Arbeit, 10 s Pause, 8 Runden (4 min), 10 s Vorlauf. In den Pausen trägst du die Wiederholungen der Runde ein.</p>'+
-      '<div class="qrow"><button type="button" class="go" data-sact="tb-free">Tabata starten</button></div>'}
+  else if(sheetTab==='wod'){const k=wodFree.kind,F=(key,t)=>'<label>'+t+'<input data-wcfg="'+key+'" inputmode="numeric" value="'+(wodFree[key]??'')+'"></label>';
+    h+='<div class="seg">'+[['amrap','AMRAP'],['emom','EMOM'],['fortime','For Time']].map(([v,t])=>'<button type="button" class="'+(k===v?'on':'')+'" data-sact="w-kind" data-v="'+v+'">'+t+'</button>').join('')+'</div>'+
+      '<div class="cfg">'+(k==='amrap'?F('min','Minuten'):k==='emom'?F('every','Alle (s)')+F('rounds','Runden'):F('min','Zeitlimit (min)')+F('rounds','Runden (Ziel)'))+'</div>'+
+      '<p style="margin:0;font-size:13px;color:var(--muted)">'+(k==='amrap'?'So viele Runden wie möglich in der Zeit. Runden per Tipp zählen.':k==='emom'?'Jede Minute (oder alle x s) eine Runde starten. Signal zu jedem Intervall.':'Uhr läuft hoch bis „Fertig“ oder bis zum Zeitlimit.')+' 10 s Vorlauf.</p>'+
+      '<div class="qrow"><button type="button" class="go" data-sact="w-start">Start</button></div>'}
+  else{h+='<div class="qrow">'+[[20,10,8,'Tabata 20/10 × 8'],[30,30,10,'30/30 × 10'],[40,20,8,'40/20 × 8']].map(([a,b,c,t])=>'<button type="button" data-sact="tb-pre" data-v="'+a+','+b+','+c+'">'+t+'</button>').join('')+'</div>'+
+      '<div class="cfg">'+[['work','Arbeit (s)'],['rest','Pause (s)'],['rounds','Runden'],['sets','Sätze'],['setRest','Satzpause (s)']].map(([k,t])=>'<label>'+t+'<input data-tcfg="'+k+'" inputmode="numeric" value="'+tbCfg[k]+'"></label>').join('')+'</div>'+
+      '<p style="margin:0;font-size:13px;color:var(--muted)">Arbeit, Pause und Runden frei wählbar, 10 s Vorlauf. In den Pausen trägst du die Wiederholungen der Runde ein.</p>'+
+      '<div class="qrow"><button type="button" class="go" data-sact="tb-free">Intervall starten</button></div>'}
   OV.innerHTML=h+'</div></div>'}
 function lapsHtml(){const c=CLK;if(!c||!c.laps.length)return '';let prev=0;return c.laps.map((t,i)=>{const d=t-prev;prev=t;return '<div><span>Runde '+(i+1)+'</span><span>'+fmtClock(d)+' · '+fmtClock(t)+'</span></div>'}).reverse().join('')}
 function updateSheet(){const b=document.getElementById('sbig');if(!b||!CLK)return;
   if(sheetTab==='stopwatch'&&CLK.kind==='stopwatch')b.textContent=fmtClock(elapsed(CLK));
   else if(sheetTab==='timer'&&(CLK.kind==='timer'||CLK.kind==='pause'))b.textContent=(left(CLK)<0?'+':'')+fmtClock(Math.abs(left(CLK)))}
 function parseMmSs(v){const m=String(v||'').trim().match(/^(\d+)(?::(\d{1,2}))?$/);if(!m)return 0;return m[2]!==undefined?+m[1]*60+ +m[2]:+m[1]}
-OV.addEventListener('click',ev=>{const a=ev.target.closest('[data-sact],[data-tbact]');if(!a)return;primeAudio();
+OV.addEventListener('click',ev=>{const a=ev.target.closest('[data-sact],[data-tbact],[data-wact]');if(!a)return;primeAudio();
   if(a.dataset.tbact){tabataAction(a.dataset.tbact,a);return}
+  if(a.dataset.wact){wodAction(a.dataset.wact);return}
   const k=a.dataset.sact;
   if(k==='close')return closeSheet();
   if(k==='tab'){sheetTab=a.dataset.v;return renderSheet()}
@@ -854,9 +890,13 @@ OV.addEventListener('click',ev=>{const a=ev.target.closest('[data-sact],[data-tb
   else if(k==='t-custom'){const s=parseMmSs(document.getElementById('tcustom').value);if(s)clkSet({kind:'timer',dur:s,label:'Timer '+fmtClock(s)})}
   else if(k==='t-p15'&&CLK){CLK.dur+=15;CLK.beeps={}}else if(k==='t-m15'&&CLK){CLK.dur=Math.max(1,CLK.dur-15)}
   else if(k==='t-pause')clkPause();else if(k==='t-resume')clkResume();else if(k==='t-reset')clkStop();
-  else if(k==='tb-free'){readTbCfg();startTabata(Object.assign({ex:['Tabata']},tbCfg),null)}
+  else if(k==='tb-free'){readTbCfg();startTabata(Object.assign({ex:['Intervall']},tbCfg),null)}
+  else if(k==='tb-pre'){const [wk,rs,rd]=a.dataset.v.split(',').map(Number);Object.assign(tbCfg,{work:wk,rest:rs,rounds:rd,sets:1});store('slothly-tabata',tbCfg)}
+  else if(k==='w-kind'){readWodCfg();wodFree.kind=a.dataset.v;store('slothly-wod',wodFree)}
+  else if(k==='w-start'){readWodCfg();const c={kind:wodFree.kind};if(c.kind==='emom'){c.every=wodFree.every;c.rounds=wodFree.rounds}else{c.min=wodFree.min;if(c.kind==='fortime'&&wodFree.rounds)c.rounds=wodFree.rounds}
+    startWod(c,null,[]);return}
   renderSheet()});
-OV.addEventListener('input',ev=>{const t=ev.target;if(t.dataset.tbrep!==undefined&&TB){const v=t.value.trim();TB.reps[+t.dataset.tbrep]=v===''?null:Math.max(0,parseInt(v,10)||0);saveTabata(false)}});
+OV.addEventListener('input',ev=>{const t=ev.target;if(t.dataset.wres&&WO){wodSetRes(WO.res,t.dataset.wres,t.value);saveWod()}if(t.dataset.tbrep!==undefined&&TB){const v=t.value.trim();TB.reps[+t.dataset.tbrep]=v===''?null:Math.max(0,parseInt(v,10)||0);saveTabata(false)}});
 function readTbCfg(){document.querySelectorAll('[data-tcfg]').forEach(i=>{const v=parseInt(i.value,10);if(v>=0)tbCfg[i.dataset.tcfg]=v});
   tbCfg.work=Math.min(600,Math.max(5,tbCfg.work));tbCfg.rounds=Math.min(50,Math.max(1,tbCfg.rounds));tbCfg.sets=Math.min(10,Math.max(1,tbCfg.sets));store('slothly-tabata',tbCfg)}
 
@@ -903,10 +943,84 @@ function tabataAction(k,a){if(!TB)return;
   else if(k==='stop'){TB.confirmStop=true;renderTabata()}else if(k==='stop-no'){TB.confirmStop=false;renderTabata()}
   else if(k==='stop-ok'||k==='close'){if(k==='stop-ok')saveTabata(true);TB=null;clkStop();OV.innerHTML='';if(S.view==='s')renderMain()}}
 /* Ergebnis in die Einheit schreiben (nur bei Tabata aus dem Plan) */
-function saveTabata(final){if(!TB||!TB.bind)return;const {id,b}=TB.bind,L=getLog(id),E=exLog(L,b);
+function saveTabata(final){if(!TB||!TB.bind)return;const {id,b,g}=TB.bind,L=getLog(id);
   if(statusOf(L)==='offen'){startSession(L,CLK?CLK.start:Date.now())}
+  if(g){L.clocks=L.clocks||{};const R=L.clocks[g]=L.clocks[g]||{kind:'intervall'};R.reps=TB.reps.slice();R.done=TB.done||!!final;R.at=R.at||Date.now();touch(id);return}
+  const E=exLog(L,b);
   TB.reps.forEach((r,i)=>{const s=E.sets[i]=E.sets[i]||{};if(r==null){delete s.r;delete s.d}else{s.r=String(r);s.d=true;s.at=s.at||Date.now()}});
   touch(id)}
+
+/* ---------- AMRAP, EMOM, For Time (#4) ----------
+   Phasen wie beim Tabata vorab, aktuelle Phase aus der Laufzeit. Ergebnis im Log unter clocks.<Block>. */
+let WO=null,wodFree={kind:'amrap',min:12,every:60,rounds:10};try{Object.assign(wodFree,JSON.parse(localStorage.getItem('slothly-wod')||'{}'))}catch(e){}
+function readWodCfg(){document.querySelectorAll('[data-wcfg]').forEach(i=>{const v=parseInt(i.value,10);wodFree[i.dataset.wcfg]=v>0?v:null});
+  wodFree.min=Math.min(90,Math.max(1,wodFree.min||12));wodFree.every=Math.min(600,Math.max(10,wodFree.every||60));wodFree.rounds=wodFree.rounds?Math.min(90,wodFree.rounds):(wodFree.kind==='emom'?10:null);store('slothly-wod',wodFree)}
+const WODN={amrap:'AMRAP',emom:'EMOM',fortime:'For Time',intervall:'Intervall'};
+function clockLbl(c){if(c.kind==='amrap')return 'AMRAP '+c.min+' min';if(c.kind==='fortime')return 'For Time'+(c.rounds?' · '+c.rounds+' Runden':'')+' · max. '+c.min+' min';
+  if(c.kind==='emom')return (c.every===60?'EMOM ':'Alle '+fmtClock(c.every)+' · ')+c.rounds+(c.every===60?' min':' Runden');return 'Intervall '+c.work+'/'+c.rest+' s × '+c.rounds}
+function startWod(cfg,bind,ex){const ph=[{k:'pre',d:10,at:0}];let t=10;
+  if(cfg.kind==='emom'){for(let r=0;r<cfg.rounds;r++){ph.push({k:'work',d:cfg.every,at:t,r});t+=cfg.every}}
+  else{ph.push({k:'work',d:cfg.min*60,at:t});t+=cfg.min*60}
+  let res={kind:cfg.kind,rounds:0,reps:'',timeS:null,capped:false};
+  if(bind){const L=getLog(bind.id),R=(L.clocks||{})[bind.g];if(R&&!R.done)res=Object.assign(res,R)}
+  WO={cfg,ph,total:t,bind,ex,res,done:false};sheetOpen=false;clkSet({kind:'wod'});
+  if(bind){const L=getLog(bind.id);if(statusOf(L)==='offen'){startSession(L,CLK.start);touch(bind.id)}}
+  renderWod()}
+function wodPhase(){const t=elapsed(CLK);let cur=WO.ph[WO.ph.length-1];for(const p of WO.ph){if(t<p.at+p.d){cur=p;break}}return{p:cur,t,left:cur.at+cur.d-t,run:t-WO.ph[0].d,end:t>=WO.total}}
+function wodTick(){if(!WO)return;const st=wodPhase();
+  if(!CLK.paused&&!WO.done){const k=st.p.at;
+    if(st.end){wodFinish(WO.cfg.kind==='fortime');return}
+    [3,2,1].forEach(n=>{if(st.left<=n&&st.left>n-1&&!CLK.beeps[k+'_'+n]){CLK.beeps[k+'_'+n]=1;beep('tick')}});
+    if(!CLK.beeps['s'+k]){CLK.beeps['s'+k]=1;if(st.p.k==='work')beep('go');if(WO.lastPh!==k){WO.lastPh=k;renderWod();return}}}
+  const big=wodBig(st),n=document.getElementById('wdnum');if(n)n.textContent=big;
+  TM.hidden=false;TM.className='timer';document.getElementById('tt').textContent=WO.done?'fertig':big;
+  document.getElementById('tl').textContent=WODN[WO.cfg.kind]+' · '+(WO.done?'fertig':st.p.k==='pre'?'gleich geht’s los':WO.cfg.kind==='emom'?'Runde '+(st.p.r+1)+'/'+WO.cfg.rounds:WO.res.rounds+' Runden');
+  document.getElementById('ts').textContent='';const tb=document.getElementById('tbs');if(tb.dataset.h!=='wd'){tb.innerHTML='<button type="button" data-tact="open">Öffnen</button>';tb.dataset.h='wd'}}
+/* AMRAP und EMOM zählen runter, For Time hoch (Zeitlimit oben rechts) */
+function wodBig(st){if(WO.done)return '✓';if(st.p.k==='pre')return String(Math.ceil(Math.max(0,st.left)));
+  return WO.cfg.kind==='fortime'?fmtClock(Math.max(0,st.run)):fmtClock(Math.ceil(Math.max(0,st.left)))}
+function wodFinish(capped){const st=wodPhase();WO.done=true;beep('end');
+  if(WO.cfg.kind==='fortime'){WO.res.capped=!!capped;WO.res.timeS=capped?WO.cfg.min*60:Math.round(Math.max(0,st.run))}
+  if(WO.cfg.kind==='emom')WO.res.rounds=WO.res.rounds||WO.cfg.rounds;
+  CLK.paused=true;CLK.pausedAt=now();saveWod();renderWod()}
+function wodSetRes(R,f,v){v=String(v).trim();if(f==='timeS'){const s=parseMmSs(v);R.timeS=s||null}else if(f==='rounds'){R.rounds=v===''?0:Math.max(0,parseInt(v,10)||0)}else if(f==='reps'){R.reps=v===''?'':String(Math.max(0,parseInt(v,10)||0))}else if(f==='capped'){R.capped=v==='1'}}
+function saveWod(){if(!WO||!WO.bind)return;const {id,g}=WO.bind,L=getLog(id);L.clocks=L.clocks||{};
+  L.clocks[g]=Object.assign({},WO.res,{kind:WO.cfg.kind,done:WO.done,at:(L.clocks[g]&&L.clocks[g].at)||Date.now()});touch(id)}
+function wodResText(R){if(!R)return '';if(R.kind==='amrap')return R.rounds+' Runden'+(R.reps?' + '+R.reps+' Wdh.':'');
+  if(R.kind==='fortime')return R.capped?'Zeitlimit erreicht'+(R.rounds?' · '+R.rounds+' Runden':'')+(R.reps?' + '+R.reps+' Wdh.':''):(R.timeS?fmtClock(R.timeS):'');
+  if(R.kind==='emom')return R.rounds+' Runden geschafft';if(R.kind==='intervall'){const g=(R.reps||[]).filter(x=>x!=null);return g.length?'Summe '+g.reduce((a,b)=>a+b,0)+' Wdh.':'erledigt'}return ''}
+function wodResInputs(R,attrs){const f=(k,t,v,w)=>'<label>'+t+'<input '+attrs+' data-f="'+k+'" inputmode="'+(k==='timeS'?'text':'numeric')+'" value="'+esc(v??'')+'"'+(w?' placeholder="'+w+'"':'')+'></label>';
+  if(R.kind==='amrap')return f('rounds','Runden',R.rounds)+f('reps','+ Wdh.',R.reps);
+  if(R.kind==='fortime')return f('timeS','Zeit',R.timeS&&!R.capped?fmtClock(R.timeS):'','mm:ss')+f('rounds','Runden',R.rounds||'')+f('reps','+ Wdh.',R.reps);
+  if(R.kind==='emom')return f('rounds','Runden geschafft',R.rounds);return ''}
+function wodBar(G,c,L){const R=(L.clocks||{})[G.g];
+  return '<div class="wodbar"><div class="wh"><b>'+esc(clockLbl(c))+'</b><button type="button" class="go" data-act="wod-start" data-g="'+G.g+'">'+(R&&R.done?'Nochmal starten':'Uhr starten')+'</button></div>'+
+    (c.kind!=='intervall'?'<div class="wodres">'+wodResInputs(R||{kind:c.kind,rounds:'',reps:''},'data-wodg="'+G.g+'" data-kind="'+c.kind+'"')+'</div>':R?'<small>'+esc(wodResText(R))+'</small>':'')+'</div>'}
+function renderWod(){if(!WO){OV.innerHTML='';return}const st=wodPhase(),c=WO.cfg,p=st.p,R=WO.res;
+  const hd='<div class="hd"><span>'+esc(clockLbl(c))+'</span><span>'+(c.kind==='fortime'&&!WO.done?'Limit '+fmtClock(c.min*60):c.kind!=='fortime'&&!WO.done?fmtClock(WO.total-st.t)+' gesamt':'')+'</span></div>';
+  if(WO.done){
+    OV.innerHTML='<div class="tbt '+(R.capped?'capped':c.kind)+'">'+hd+'<div class="mid"><div class="ph">'+(R.capped?'Zeitlimit':'Fertig')+'</div><div class="sum">'+
+      '<div class="fl">'+wodResInputs(R,'').replace(/data-f=/g,'data-wres=')+'</div>'+
+      (WO.bind?'<span style="font-size:14px;opacity:.85">Gespeichert in der Einheit.</span>':'')+'</div></div>'+
+      '<div class="foot"><button type="button" data-wact="close">Schließen</button></div></div>';return}
+  const work=p.k==='work',rc=(c.kind==='amrap'||c.kind==='fortime')&&work;
+  OV.innerHTML='<div class="tbt '+(p.k==='pre'?'pre':c.kind)+'">'+hd+
+    '<div class="mid"><div class="ph">'+(p.k==='pre'?'Gleich geht’s los':c.kind==='emom'?'Runde '+(p.r+1)+' / '+c.rounds:WODN[c.kind])+'</div><div class="num" id="wdnum">'+wodBig(st)+'</div>'+
+    (rc?'<div class="reps"><div class="rcn">'+R.rounds+' Runde'+(R.rounds===1?'':'n')+(c.rounds?' von '+c.rounds:'')+'</div><div class="rc"><button type="button" class="minus" data-wact="minus" aria-label="Runde zurück">−</button><button type="button" class="plus" data-wact="plus">+1 Runde</button></div></div>':'')+
+    (WO.ex.length?'<div class="nx">'+WO.ex.map(esc).join(' · ')+'</div>':'')+
+    '</div><div class="foot">'+(c.kind==='fortime'&&work?'<button type="button" data-wact="finish">Fertig</button>':'')+
+    (CLK.paused?'<button type="button" data-wact="resume">Weiter</button>':'<button type="button" data-wact="pause">Pause</button>')+
+    (WO.confirmStop?'<button type="button" data-wact="stop-ok">Wirklich beenden</button><button type="button" data-wact="stop-no">Nein</button>':'<button type="button" data-wact="stop">Beenden</button>')+
+    '<button type="button" data-wact="hide">Klein</button></div></div>'}
+function wodAction(k){if(!WO)return;const R=WO.res;
+  if(k==='plus'){R.rounds++;beep('tick');saveWod();renderWod();if(WO.cfg.kind==='fortime'&&WO.cfg.rounds&&R.rounds>=WO.cfg.rounds)wodFinish(false)}
+  else if(k==='minus'){R.rounds=Math.max(0,R.rounds-1);saveWod();renderWod()}
+  else if(k==='finish')wodFinish(false);
+  else if(k==='pause'){clkPause();renderWod()}else if(k==='resume'){clkResume();renderWod()}
+  else if(k==='stop'){WO.confirmStop=true;renderWod()}else if(k==='stop-no'){WO.confirmStop=false;renderWod()}
+  else if(k==='stop-ok'){wodFinish(WO.cfg.kind==='fortime')}
+  else if(k==='hide'){OV.innerHTML=''}
+  else if(k==='close'){saveWod();WO=null;clkStop();OV.innerHTML='';if(S.view==='s')renderMain()}}
 
 /* ---------- Eingaben ---------- */
 const main=document.getElementById('main');
@@ -970,12 +1084,15 @@ main.addEventListener('click',async ev=>{const b=ev.target.closest('[data-act]')
   if(a==='s-finish'){sessUI='finish';document.getElementById('sessbox').innerHTML=sessBox(S.w,S.d);document.getElementById('sessbox').scrollIntoView({block:'start',behavior:'smooth'});return}
   if(a==='s-finish-ok'){const v=(document.getElementById('finat')||{}).value;let at=Date.now();
     if(/^\d{2}:\d{2}$/.test(v||'')){const d=new Date();d.setHours(+v.slice(0,2),+v.slice(3),0,0);if(d.getTime()<=Date.now()+60e3&&d.getTime()>=L.startedAt)at=d.getTime()}
-    finishSession(L,at);sessUI=null;touch(id);renderMain();if(CLK&&CLK.kind!=='tabata')clkStop();toast('Training beendet · '+Math.round((L.durS||0)/60)+' min');return}
+    finishSession(L,at);sessUI=null;touch(id);renderMain();if(CLK&&CLK.kind!=='tabata'&&CLK.kind!=='wod')clkStop();toast('Training beendet · '+Math.round((L.durS||0)/60)+' min');return}
   if(a==='s-end-at'){finishSession(L,+b.dataset.v);sessUI=null;touch(id);renderMain();return}
   if(a==='s-abort'){sessUI='abort';document.getElementById('sessbox').innerHTML=sessBox(S.w,S.d);return}
   if(a==='s-abort-ok'){L.status='abgebrochen';L.finishedAt=Date.now();L.abortReason=(document.getElementById('abortwhy')||{}).value||'';if(L.startedAt)L.durS=Math.round((L.finishedAt-L.startedAt)/1000);sessUI=null;touch(id);renderMain();return}
   if(a==='s-reopen'){L.status='laeuft';L.startedAt=L.startedAt||Date.now();delete L.finishedAt;delete L.durS;delete L.abortReason;touch(id);renderMain();return}
   if(a==='view'){VIEW=VIEW==='runden'?'uebungen':'runden';try{localStorage.setItem(VKEY,VIEW)}catch(e){}const y=scrollY;renderMain();scrollTo(0,y);return}
+  if(a==='wod-start'){const D=DAYS[S.d],G=groupsOf(D).find(g=>g.g===b.dataset.g),c=D.clocks[G.g];
+    if(c.kind==='intervall')startTabata({work:c.work,rest:c.rest||0,rounds:c.rounds,sets:1,setRest:0,ex:G.ex.map(e=>e.n)},{id,g:G.g});
+    else startWod(Object.assign({},c),{id,g:G.g},G.ex.map(e=>e.b+' '+e.n));return}
   if(a==='tb-start'){const e=DAYS[S.d].ex.find(x=>x.b===b.dataset.b);startTabata(Object.assign({},e.tabata),{id,b:e.b});return}
   if(a==='rowclk'){const e=DAYS[S.d].ex.find(x=>x.b===b.dataset.b),i=+b.dataset.i;
     if(statusOf(L)==='offen'){startSession(L);touch(id);document.getElementById('sessbox').innerHTML=sessBox(S.w,S.d)}
@@ -1003,6 +1120,7 @@ main.addEventListener('input',ev=>{const t=ev.target;const id=ID(S.w,S.d),L=getL
   else if(t.dataset.note){exLog(L,t.dataset.note).note=t.value}
   else if(t.dataset.sknote){L.skNote=t.value}
   else if(t.dataset.tbr){const E=exLog(L,t.dataset.tbr),i=+t.dataset.i,s=E.sets[i]=E.sets[i]||{},v=t.value.trim();if(v===''){delete s.r;delete s.d}else{s.r=String(parseInt(v,10)||0);s.d=true}}
+  else if(t.dataset.wodg){L.clocks=L.clocks||{};const R=L.clocks[t.dataset.wodg]=L.clocks[t.dataset.wodg]||{kind:t.dataset.kind};wodSetRes(R,t.dataset.f,t.value);R.done=true}
   else if(t.dataset.fb){L.fb[t.dataset.fb]=t.value}
   else if(t.dataset.done){if(isIso(t.value))L.doneOn=t.value;else delete L.doneOn}else return;
   touch(id)});
