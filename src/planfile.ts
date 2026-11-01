@@ -7,6 +7,11 @@ import { deriveCapture, normalizeSkillBlock, FIELDS, TIME_MODES, WEIGHT_REFS, ty
 export type Format = 'standard' | 'per_pause' | 'circuit' | 'rounds' | 'tabata';
 /** Tabata (#11): Arbeit/Pause in Sekunden, Runden je Satz, Sätze, Pause zwischen Sätzen, Übungen im Wechsel. */
 export interface TabataCfg { work: number; rest: number; rounds: number; sets: number; setRest: number; ex: string[] }
+/** #4: Uhr für einen Block. amrap: min = Gesamtzeit; fortime: min = Zeitlimit, rounds = Ziel; emom: every s × rounds; intervall: work/rest × rounds. */
+export type ClockKind = 'amrap' | 'emom' | 'fortime' | 'intervall';
+export interface ClockCfg { kind: ClockKind; min?: number; every?: number; rounds?: number; work?: number; rest?: number }
+export const CLOCK_KINDS: ClockKind[] = ['amrap', 'emom', 'fortime', 'intervall'];
+type ClockV2 = { art?: string; minuten?: number; alle_s?: number; runden?: number; arbeit_s?: number; pause_s?: number };
 
 /** Interne Form: so liefert /api/plan den Plan an die Oberfläche. */
 export interface PlanSlot {
@@ -23,7 +28,10 @@ export interface PlanDay {
   title: string; offset: number; warm?: string[]; skill?: string | null; cool?: string | null;
   /** #5: strukturierter Skill-Block; ohne ihn wird `skill` (Text) beim Laden zerlegt. */
   skillBlock?: SkillBlock | null;
-  notes?: string[]; groups?: Record<string, string>; ex: PlanSlot[];
+  notes?: string[]; groups?: Record<string, string>;
+  /** #4: Uhr je Block (Buchstabe → Uhr). */
+  clocks?: Record<string, ClockCfg>;
+  ex: PlanSlot[];
 }
 export interface RuleSection { title: string; p?: string[]; ul?: string[]; table?: { head: string[]; rows: string[][] } }
 export interface PlanFile {
@@ -43,7 +51,7 @@ export interface PlanV2 {
   tage: {
     titel: string; wochentag: string; aufwaermen?: string[]; cooldown?: string | null;
     skill?: string | { titel?: string; dauer?: string; hinweis?: string; wochen?: unknown[]; uebungen?: unknown[] } | null;
-    hinweise?: string[]; bloecke?: Record<string, string>;
+    hinweise?: string[]; bloecke?: Record<string, string | { titel?: string; uhr?: ClockV2 }>;
     uebungen: {
       block: string; name: string; muskel?: string | null; video?: string | null; kadenz?: string | null; info?: string | null;
       start?: string | null; pause?: string | null; schema: string; darstellung?: string; wdh?: string | null; seite?: string | null;
@@ -62,6 +70,46 @@ export const LIMITS = { weeks: 26, days: 7, exercises: 40, text: 500 };
 
 const str = (v: unknown) => (v === undefined || v === null || v === '' ? null : String(v));
 const strs = (v: unknown) => (Array.isArray(v) ? v.map(x => String(x)) : []);
+const num = (v: unknown) => (v === undefined || v === null || v === '' ? undefined : Number(v));
+
+/** bloecke: Wert ist der Titel oder {titel, uhr}. */
+function blocksFromV2(raw: unknown, T: string, errors: string[]) {
+  const groups: Record<string, string> = {}, clocks: Record<string, ClockCfg> = {};
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return { groups, clocks };
+  for (const [L, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof v === 'string') { groups[L] = v; continue; }
+    const o = (v ?? {}) as { titel?: unknown; uhr?: ClockV2 };
+    if (o.titel != null) groups[L] = String(o.titel);
+    if (o.uhr) {
+      const u = o.uhr, kind = String(u.art ?? '') as ClockKind;
+      if (!CLOCK_KINDS.includes(kind)) { errors.push(`${T}, Block ${L}: uhr.art muss ${CLOCK_KINDS.join(', ')} sein`); continue; }
+      const c: ClockCfg = { kind };
+      if (kind === 'amrap' || kind === 'fortime') c.min = num(u.minuten);
+      if (kind === 'fortime' && u.runden != null) c.rounds = num(u.runden);
+      if (kind === 'emom') { c.every = num(u.alle_s) ?? 60; c.rounds = num(u.runden); }
+      if (kind === 'intervall') { c.work = num(u.arbeit_s); c.rest = num(u.pause_s) ?? 0; c.rounds = num(u.runden); }
+      clocks[L] = c;
+    }
+  }
+  return { groups, clocks };
+}
+function clockToV2(c: ClockCfg): ClockV2 {
+  const u: ClockV2 = { art: c.kind };
+  if (c.min != null) u.minuten = c.min;
+  if (c.every != null) u.alle_s = c.every;
+  if (c.work != null) u.arbeit_s = c.work;
+  if (c.rest != null) u.pause_s = c.rest;
+  if (c.rounds != null) u.runden = c.rounds;
+  return u;
+}
+/** Kurzform für Anzeige und Vorschau, z. B. „AMRAP 12 min“, „EMOM 10 × 1 min“. */
+export function clockLabel(c: ClockCfg): string {
+  const t = (s: number) => (s % 60 ? `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')} min` : `${s / 60} min`);
+  if (c.kind === 'amrap') return `AMRAP ${c.min} min`;
+  if (c.kind === 'fortime') return `For Time${c.rounds ? ` ${c.rounds} Runden` : ''}, max. ${c.min} min`;
+  if (c.kind === 'emom') return c.every === 60 ? `EMOM ${c.rounds} min` : `E${c.every! % 60 ? c.every + 's' : c.every! / 60 + 'M'}OM ${c.rounds} × ${t(c.every!)}`;
+  return `Intervall ${c.work}/${c.rest} s × ${c.rounds}`;
+}
 
 /** v2 → interne Form. Fehler bei der Umwandlung landen in errors (Prüfung folgt in checkPlan). */
 function fromV2(f: PlanV2, errors: string[]): PlanFile {
@@ -78,12 +126,13 @@ function fromV2(f: PlanV2, errors: string[]): PlanFile {
     schemes,
     days: (Array.isArray(f.tage) ? f.tage : []).map((t, di) => {
       const off = WD.indexOf(String(t?.wochentag ?? '').slice(0, 2));
+      const bl = blocksFromV2(t?.bloecke, `Tag ${di + 1}`, errors);
       if (off < 0) errors.push(`Tag ${di + 1}: wochentag muss Mo, Di, Mi, Do, Fr, Sa oder So sein`);
       return {
         title: String(t?.titel ?? ''), offset: off, warm: strs(t?.aufwaermen), cool: str(t?.cooldown),
         skill: typeof t?.skill === 'string' ? str(t.skill) : null,
         skillBlock: t?.skill && typeof t.skill === 'object' ? normalizeSkillBlock(t.skill, Number(f.wochen) || 1) : null,
-        notes: strs(t?.hinweise), groups: t?.bloecke ?? {},
+        notes: strs(t?.hinweise), groups: bl.groups, clocks: bl.clocks,
         ex: (Array.isArray(t?.uebungen) ? t.uebungen : []).map(u => {
           const d = String(u?.darstellung ?? 'saetze');
           if (!DARST[d]) errors.push(`Tag ${di + 1}, ${u?.block}: darstellung muss saetze, pausenfueller, zirkel oder runden sein`);
@@ -124,7 +173,9 @@ export function toV2(p: PlanFile): PlanV2 {
       skill: d.skillBlock ? { titel: d.skillBlock.title, ...(d.skillBlock.dur ? { dauer: d.skillBlock.dur } : {}), ...(d.skillBlock.hint ? { hinweis: d.skillBlock.hint } : {}),
         wochen: d.skillBlock.weeks.map(w => w.map(i => ({ name: i.n, ...(i.v ? { vorgabe: i.v } : {}), ...(i.q ? { video: i.q } : {}) }))) } : (d.skill ?? null),
       cooldown: d.cool ?? null,
-      hinweise: d.notes ?? [], bloecke: d.groups ?? {},
+      hinweise: d.notes ?? [],
+      bloecke: Object.fromEntries([...new Set([...Object.keys(d.groups ?? {}), ...Object.keys(d.clocks ?? {})])].map(L =>
+        [L, d.clocks?.[L] ? { titel: d.groups?.[L] ?? `Block ${L}`, uhr: clockToV2(d.clocks[L]) } : (d.groups?.[L] ?? `Block ${L}`)])),
       uebungen: d.ex.map(e => {
         const u: PlanV2['tage'][number]['uebungen'][number] = { block: e.b, name: e.n, muskel: e.m ?? null, video: e.q ?? null,
           kadenz: e.k ?? null, info: e.i ?? null, start: e.st ?? null, pause: e.pa ?? null, schema: e.scheme,
@@ -226,6 +277,16 @@ export function checkPlan(p: PlanFile): { errors: string[]; warnings: string[] }
       if (x.format === 'standard' && x.scheme in schemes && schemes[x.scheme].some(w => Array.isArray(w) && !w[1])) warnings.push(`${W}: Schema ${x.scheme} hat Wochen ohne rpe`);
     });
     const letters = new Set(d.ex.map(x => (x.b === 'A+' ? 'A' : x.b?.[0])));
+    for (const [L, c] of Object.entries(d.clocks ?? {})) {
+      const B = `${T}, Block ${L}`;
+      if (!letters.has(L)) e(`${B}: uhr gesetzt, aber keine Übung in Block ${L}`);
+      const rng = (v: number | undefined, a: number, b: number, n: string) => { if (!Number.isInteger(v) || v! < a || v! > b) e(`${B}: uhr.${n} muss ${a} bis ${b} sein`); };
+      if (!CLOCK_KINDS.includes(c.kind)) e(`${B}: uhr.art muss ${CLOCK_KINDS.join(', ')} sein`);
+      if (c.kind === 'amrap' || c.kind === 'fortime') rng(c.min, 1, 90, 'minuten');
+      if (c.kind === 'fortime' && c.rounds != null) rng(c.rounds, 1, 100, 'runden');
+      if (c.kind === 'emom') { rng(c.every, 10, 600, 'alle_s'); rng(c.rounds, 1, 90, 'runden'); }
+      if (c.kind === 'intervall') { rng(c.work, 5, 600, 'arbeit_s'); rng(c.rest, 0, 600, 'pause_s'); rng(c.rounds, 1, 50, 'runden'); }
+    }
     for (const L of letters) if (L && !d.groups?.[L]) warnings.push(`${T}: kein Name für Block ${L} unter bloecke (es wird "Block ${L}" angezeigt)`);
   });
   for (const code of Object.keys(schemes)) if (!used.has(code)) warnings.push(`Schema ${code} wird von keiner Übung benutzt`);
@@ -242,6 +303,7 @@ export function summarize(p: PlanFile) {
     days: p.days.map(d => ({
       title: d.title, weekday: WD[d.offset],
       skill: d.skillBlock ? d.skillBlock.title : d.skill ? 'Skill (Text)' : null,
+      clocks: Object.entries(d.clocks ?? {}).map(([L, c]) => `${L}: ${clockLabel(c)}`),
       exercises: d.ex.map(x => `${x.b} ${x.n} · ${captureLabel(x)}`),
     })),
   };

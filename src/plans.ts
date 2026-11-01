@@ -50,10 +50,11 @@ async function writePlanContent(c: Tx, planId: string, p: PlanFile) {
     await c.query('INSERT INTO schemes (plan_id, code, weeks) VALUES ($1, $2, $3)', [planId, code, JSON.stringify(weeks)]);
   for (const [di, d] of p.days.entries()) {
     const dr = await c.query<{ id: string }>(
-      `INSERT INTO plan_days (plan_id, idx, title, weekday_offset, warmup, skill, skill_block, cooldown, notes, group_labels)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING id`,
+      `INSERT INTO plan_days (plan_id, idx, title, weekday_offset, warmup, skill, skill_block, cooldown, notes, group_labels, group_clocks)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) RETURNING id`,
       [planId, di, d.title, d.offset, JSON.stringify(d.warm ?? []), d.skill ?? null, d.skillBlock ? JSON.stringify(d.skillBlock) : null,
-       d.cool ?? null, JSON.stringify(d.notes ?? []), JSON.stringify(d.groups ?? {})]);
+       d.cool ?? null, JSON.stringify(d.notes ?? []), JSON.stringify(d.groups ?? {}),
+       d.clocks && Object.keys(d.clocks).length ? JSON.stringify(d.clocks) : null]);
     for (const [pos, e] of d.ex.entries()) {
       const exId = await upsertExercise(c, e);
       await c.query(
@@ -98,7 +99,7 @@ export async function loadPlan(db: Db, userId: string, planId?: string) {
     skips: { dates: p.skip_dates, updatedAt: Number(p.skips_updated_at) },
     moves: { map: p.moves, updatedAt: Number(p.moves_updated_at) },
     days: days.map(d => ({
-      title: d.title, offset: d.weekday_offset, warm: d.warmup, skill: d.skill, cool: d.cooldown, notes: d.notes, groups: d.group_labels,
+      title: d.title, offset: d.weekday_offset, warm: d.warmup, skill: d.skill, cool: d.cooldown, notes: d.notes, groups: d.group_labels, clocks: d.group_clocks ?? {},
       // #5: strukturiert, sonst aus dem alten Text abgeleitet
       skillBlock: d.skill_block ?? parseSkillText(d.skill, p.weeks),
       ex: slots.filter(s => s.day_id === d.id).map(s => {
